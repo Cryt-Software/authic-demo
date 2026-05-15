@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Anthic — Spin & Win</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0a0a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #fff;
+      touch-action: none;
+    }
+
+    .header {
+      width: 100%;
+      height: 52px;
+      background: rgba(10,10,10,0.97);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .logo { font-size: 20px; font-weight: 800; color: #00d4aa; letter-spacing: 2px; }
+
+    .token-pill {
+      background: rgba(0,212,170,0.1);
+      border: 1px solid rgba(0,212,170,0.35);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #00d4aa;
+    }
+
+    canvas { display: block; flex-shrink: 0; }
+
+    /* ── Confetti canvas ── */
+    #confetti {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      z-index: 90;
+    }
+
+    /* ── Spin button ── */
+    #spinBtn {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      background: #00d4aa;
+      color: #000;
+      font-size: 14px;
+      font-weight: 800;
+      border: none;
+      cursor: pointer;
+      z-index: 20;
+      letter-spacing: 1px;
+      box-shadow: 0 0 0 6px rgba(0,212,170,0.12), 0 8px 28px rgba(0,212,170,0.28);
+      transition: transform 0.12s, box-shadow 0.12s, background 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #spinBtn:active:not(:disabled) {
+      transform: translateX(-50%) scale(0.92);
+      box-shadow: 0 0 0 3px rgba(0,212,170,0.08), 0 4px 12px rgba(0,212,170,0.2);
+    }
+
+    #spinBtn:disabled {
+      background: #1c1c1c;
+      color: #333;
+      box-shadow: none;
+      cursor: default;
+    }
+
+    /* ── Overlays ── */
+    .overlay {
+      position: fixed;
+      top: 52px; left: 0; right: 0; bottom: 0;
+      background: rgba(10,10,10,0.96);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 20px;
+    }
+
+    .overlay.hidden { display: none; }
+
+    .card {
+      background: #111;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 26px 22px;
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Card slide-in animation */
+    .card-enter {
+      animation: cardSlideUp 0.42s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+    }
+
+    @keyframes cardSlideUp {
+      from { transform: translateY(36px) scale(0.97); opacity: 0; }
+      to   { transform: translateY(0)    scale(1);    opacity: 1; }
+    }
+
+    .divider { border: none; border-top: 1px solid rgba(255,255,255,0.07); }
+
+    /* ── Prize Flash overlay ── */
+    #prizeFlash {
+      z-index: 60;
+      background: rgba(0,0,0,0.9);
+      cursor: pointer;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #prizeFlash.fade-out {
+      animation: overlayFade 0.35s ease-out forwards;
+    }
+
+    @keyframes overlayFade {
+      to { opacity: 0; }
+    }
+
+    .flash-inner {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      animation: popIn 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.4); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    .flash-glow {
+      position: absolute;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      filter: blur(60px);
+      opacity: 0.18;
+      pointer-events: none;
+    }
+
+    .flash-emoji {
+      font-size: 92px;
+      line-height: 1;
+      animation: emojiPop 0.9s ease-in-out 0.5s infinite alternate;
+      position: relative;
+      z-index: 1;
+    }
+
+    @keyframes emojiPop {
+      from { transform: translateY(0) scale(1); }
+      to   { transform: translateY(-14px) scale(1.06); }
+    }
+
+    .flash-title {
+      font-size: 36px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      line-height: 1.1;
+      position: relative;
+      z-index: 1;
+    }
+
+    .flash-sub {
+      font-size: 16px;
+      color: #777;
+      position: relative;
+      z-index: 1;
+    }
+
+    .flash-tap {
+      font-size: 11px;
+      color: #2a2a2a;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      margin-top: 20px;
+      animation: blink 1.6s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 0.25; }
+      50%       { opacity: 0.7; }
+    }
+
+    /* ── Start ── */
+    .start-hero { text-align: center; }
+    .start-hero .s-icon { font-size: 44px; line-height: 1; margin-bottom: 8px; }
+    .start-hero h2 { font-size: 19px; font-weight: 800; margin-bottom: 5px; }
+    .start-hero p  { font-size: 13px; color: #555; line-height: 1.5; }
+
+    .prize-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .prize-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .prize-row .pr-icon { font-size: 22px; flex-shrink: 0; }
+    .prize-row .pr-info { flex: 1; }
+    .prize-row .pr-name { font-size: 13px; font-weight: 700; color: #ddd; }
+    .prize-row .pr-sub  { font-size: 11px; color: #444; margin-top: 1px; }
+    .prize-row .pr-pct  {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 20px;
+      flex-shrink: 0;
+    }
+
+    .prize-row.pct-high  { border-color: rgba(0,212,170,0.15); }
+    .prize-row.pct-low   { border-color: rgba(255,180,0,0.12); }
+    .prize-row.pct-shot  { border-color: rgba(255,107,53,0.15); }
+    .pct-high .pr-pct    { background: rgba(0,212,170,0.12); color: #00d4aa; }
+    .pct-low  .pr-pct    { background: rgba(255,180,0,0.12);  color: #ffb400; }
+    .pct-shot .pr-pct    { background: rgba(255,107,53,0.12); color: #ff6b35; }
+
+    .play-btn {
+      width: 100%; background: #00d4aa; color: #000;
+      font-size: 16px; font-weight: 800; border: none;
+      border-radius: 12px; padding: 15px; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .play-btn:active { opacity: 0.85; }
+
+    .demo-row  { display: flex; align-items: center; gap: 6px; }
+    .demo-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #222; flex-shrink: 0; }
+    .demo-btn  {
+      flex: 1; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 8px; color: #3a3a3a; font-size: 10px; font-weight: 600;
+      padding: 8px 4px; cursor: pointer; text-align: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .d-pts  { border-color: rgba(0,212,170,0.15); color: #00d4aa; }
+    .d-pint { border-color: rgba(255,180,0,0.15);  color: #ffb400; }
+    .d-shot { border-color: rgba(255,107,53,0.15); color: #ff6b35; }
+    .d-none { border-color: rgba(255,255,255,0.06); color: #333; }
+
+    /* ── Capture ── */
+    .result-hero { text-align: center; }
+    .r-emoji { font-size: 50px; line-height: 1; margin-bottom: 8px; }
+    .r-title { font-size: 21px; font-weight: 800; }
+    .r-title.pts  { color: #00d4aa; }
+    .r-title.pint { color: #ffb400; }
+    .r-title.shot { color: #ff6b35; }
+    .r-title.none { color: #555; }
+    .r-sub { font-size: 13px; color: #555; margin-top: 5px; line-height: 1.5; }
+
+    .field-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: #444; margin-bottom: 7px; }
+    .input-wrap  { display: flex; flex-direction: column; gap: 10px; }
+    .phone-row   { display: flex; gap: 8px; }
+
+    select.cc {
+      width: 78px; flex-shrink: 0; background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+      color: #fff; font-size: 14px; padding: 12px 8px;
+      outline: none; -webkit-appearance: none;
+    }
+
+    input[type="email"], input[type="tel"] {
+      width: 100%; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px; color: #fff; font-size: 15px;
+      padding: 12px 16px; outline: none; -webkit-appearance: none;
+    }
+
+    input:focus, select:focus { border-color: #00d4aa; }
+    input::placeholder { color: #2a2a2a; }
+    .error-msg { font-size: 12px; color: #ff5a5a; display: none; }
+
+    .claim-btn {
+      width: 100%; color: #000; font-size: 15px; font-weight: 800;
+      border: none; border-radius: 12px; padding: 15px; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .claim-btn:active { opacity: 0.85; }
+    .c-pts  { background: #00d4aa; }
+    .c-pint { background: #ffb400; }
+    .c-shot { background: #ff6b35; }
+    .c-none { background: #333; color: #888; }
+
+    .privacy { font-size: 11px; color: #2a2a2a; text-align: center; line-height: 1.5; }
+
+    /* ── Drink / Shot choice ── */
+    .choice-hero { text-align: center; }
+    .choice-title { font-size: 18px; font-weight: 800; }
+    .choice-sub   { font-size: 13px; color: #555; margin-top: 5px; }
+
+    .choice-opts { display: flex; gap: 12px; }
+
+    .choice-btn {
+      flex: 1; background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px; padding: 24px 10px;
+      cursor: pointer; display: flex; flex-direction: column;
+      align-items: center; gap: 8px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .choice-btn:active { border-color: #ffb400; background: rgba(255,180,0,0.07); }
+    .ch-emoji { font-size: 46px; line-height: 1; }
+    .ch-name  { font-size: 13px; font-weight: 700; color: #fff; }
+
+    /* ── Confirmed ── */
+    .conf-hero {
+      text-align: center; display: flex;
+      flex-direction: column; align-items: center; gap: 10px;
+    }
+
+    .conf-emoji  { font-size: 68px; line-height: 1; }
+    .conf-title  { font-size: 20px; font-weight: 800; color: #fff; }
+    .conf-sub    { font-size: 13px; color: #555; line-height: 1.6; }
+    .conf-note   { font-size: 14px; font-weight: 700; color: #00d4aa; }
+
+    .replay-btn {
+      width: 100%; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px; color: #555; font-size: 14px;
+      font-weight: 600; padding: 14px; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">anthic</div>
+    <div class="token-pill" id="tokenPill">🎡 Spin to win!</div>
+  </div>
+
+  <!-- ── Confetti canvas (always on top, pointer-events none) ── -->
+  <canvas id="confetti"></canvas>
+
+  <!-- ── Start overlay ── -->
+  <div class="overlay" id="startOverlay">
+    <div class="card">
+      <div class="start-hero">
+        <div class="s-icon">🎡</div>
+        <h2>Thanks for your order!</h2>
+        <p>You've earned a free spin. Here's what's on the wheel:</p>
+      </div>
+
+      <div class="prize-list">
+        <div class="prize-row pct-high">
+          <div class="pr-icon">🪙</div>
+          <div class="pr-info">
+            <div class="pr-name">Loyalty Points</div>
+            <div class="pr-sub">+50, +100 or +200 pts on your account</div>
+          </div>
+          <div class="pr-pct">40%</div>
+        </div>
+        <div class="prize-row pct-high">
+          <div class="pr-icon">✨</div>
+          <div class="pr-info">
+            <div class="pr-name">Double Points</div>
+            <div class="pr-sub">2× points on your next order</div>
+          </div>
+          <div class="pr-pct">15%</div>
+        </div>
+        <div class="prize-row pct-low">
+          <div class="pr-icon">🍺</div>
+          <div class="pr-info">
+            <div class="pr-name">Free Pint</div>
+            <div class="pr-sub">Any draught pint on us</div>
+          </div>
+          <div class="pr-pct">5%</div>
+        </div>
+        <div class="prize-row pct-shot">
+          <div class="pr-icon">🥃</div>
+          <div class="pr-info">
+            <div class="pr-name">Free Shot</div>
+            <div class="pr-sub">Any house spirit, claimed at the bar</div>
+          </div>
+          <div class="pr-pct">5% × 2</div>
+        </div>
+      </div>
+
+      <button class="play-btn" onclick="launchGame()">Tap to Spin ▶</button>
+
+      <div class="demo-row">
+        <span class="demo-label">Demo</span>
+        <button class="demo-btn d-none" onclick="forceDemo('none')">No Win</button>
+        <button class="demo-btn d-pts"  onclick="forceDemo('pts200')">+200 pts</button>
+        <button class="demo-btn d-pint" onclick="forceDemo('pint')">Free Pint</button>
+        <button class="demo-btn d-shot" onclick="forceDemo('shot')">Free Shot</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Prize flash ── -->
+  <div class="overlay hidden" id="prizeFlash" onclick="skipFlash()">
+    <div class="flash-glow" id="flashGlow"></div>
+    <div class="flash-inner">
+      <div class="flash-emoji" id="flashEmoji">🍺</div>
+      <div class="flash-title" id="flashTitle">FREE PINT!</div>
+      <div class="flash-sub"   id="flashSub">Lucky you!</div>
+      <div class="flash-tap">Tap to continue</div>
+    </div>
+  </div>
+
+  <!-- ── End capture ── -->
+  <div class="overlay hidden" id="endOverlay">
+    <div class="card">
+      <div class="result-hero">
+        <div class="r-emoji" id="rEmoji">🎉</div>
+        <div class="r-title" id="rTitle">You won!</div>
+        <div class="r-sub"   id="rSub">Enter your details to claim your reward.</div>
+      </div>
+      <hr class="divider">
+      <div class="input-wrap">
+        <div>
+          <div class="field-label">Email</div>
+          <input type="email" id="emailInput" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div>
+          <div class="field-label">Phone</div>
+          <div class="phone-row">
+            <select class="cc">
+              <option>🇮🇪 +353</option>
+              <option>🇬🇧 +44</option>
+              <option>🇺🇸 +1</option>
+              <option>🇩🇪 +49</option>
+              <option>🇫🇷 +33</option>
+            </select>
+            <input type="tel" id="phoneInput" placeholder="087 123 4567" autocomplete="tel">
+          </div>
+        </div>
+        <div class="error-msg" id="errorMsg">Please enter your email or phone number.</div>
+      </div>
+      <button class="claim-btn" id="claimBtn" onclick="submitCapture()">Claim Reward</button>
+      <div class="privacy">No spam — used only to deliver your reward.</div>
+    </div>
+  </div>
+
+  <!-- ── Drink choice ── -->
+  <div class="overlay hidden" id="drinkOverlay">
+    <div class="card">
+      <div class="choice-hero">
+        <div class="choice-title">Choose your pint 🍺</div>
+        <div class="choice-sub">Show your choice at the bar to claim</div>
+      </div>
+      <div class="choice-opts">
+        <button class="choice-btn" onclick="confirmChoice('Lager','🍺')">
+          <span class="ch-emoji">🍺</span>
+          <span class="ch-name">Lager</span>
+        </button>
+        <button class="choice-btn" onclick="confirmChoice('Stout','🍺')">
+          <span class="ch-emoji">🏴</span>
+          <span class="ch-name">Stout</span>
+        </button>
+        <button class="choice-btn" onclick="confirmChoice('Cider','🍏')">
+          <span class="ch-emoji">🍏</span>
+          <span class="ch-name">Cider</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Shot choice ── -->
+  <div class="overlay hidden" id="shotOverlay">
+    <div class="card">
+      <div class="choice-hero">
+        <div class="choice-title">Choose your shot 🥃</div>
+        <div class="choice-sub">Show your choice at the bar to claim</div>
+      </div>
+      <div class="choice-opts">
+        <button class="choice-btn" onclick="confirmChoice('Whiskey','🥃')">
+          <span class="ch-emoji">🥃</span>
+          <span class="ch-name">Whiskey</span>
+        </button>
+        <button class="choice-btn" onclick="confirmChoice('Tequila','🍋')">
+          <span class="ch-emoji">🍋</span>
+          <span class="ch-name">Tequila</span>
+        </button>
+        <button class="choice-btn" onclick="confirmChoice('Vodka','🧊')">
+          <span class="ch-emoji">🧊</span>
+          <span class="ch-name">Vodka</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Confirmed ── -->
+  <div class="overlay hidden" id="confirmedOverlay">
+    <div class="card">
+      <div class="conf-hero">
+        <div class="conf-emoji"  id="confEmoji">🎉</div>
+        <div class="conf-title"  id="confTitle">Enjoy!</div>
+        <div class="conf-sub"    id="confSub">Show this screen to claim.</div>
+        <div class="conf-note"   id="confNote"></div>
+      </div>
+      <button class="replay-btn" onclick="replayGame()">Spin Again</button>
+    </div>
+  </div>
+
+  <canvas id="game"></canvas>
+  <button id="spinBtn" onclick="doSpin()" disabled>SPIN</button>
+
+  <script>
+    // ── Canvas ────────────────────────────────────────────────
+    const canvas = document.getElementById('game');
+    const ctx    = canvas.getContext('2d');
+    const HEADER = 52;
+    const CW     = Math.min(window.innerWidth, 480);
+    const CH     = window.innerHeight - HEADER;
+    canvas.width  = CW;
+    canvas.height = CH;
+    const S  = CW / 360;
+    const CX = CW / 2;
+    const CY = CH * 0.43;
+    const R  = Math.min(CW * 0.43, (CH - 120) * 0.82);
+
+    // ── 20 Segments ───────────────────────────────────────────
+    const SEGS = [
+      { icon:'🪙',  label:'+50 pts',    color:'#081a0a', border:'#0d3015', text:'#00d4aa', type:'pts',  pts:50  }, // 0
+      { icon:'',    label:'Try Again',  color:'#101016', border:'#1a1a28', text:'#333',    type:'none', pts:0   }, // 1
+      { icon:'🪙',  label:'+50 pts',    color:'#081a0a', border:'#0d3015', text:'#00d4aa', type:'pts',  pts:50  }, // 2
+      { icon:'✨',  label:'2× Points',  color:'#0a1a08', border:'#153018', text:'#44ff88', type:'2x',   pts:0   }, // 3
+      { icon:'🥃',  label:'Free Shot!', color:'#1a0c04', border:'#3a1808', text:'#ff6b35', type:'shot', pts:0   }, // 4
+      { icon:'🪙',  label:'+100 pts',   color:'#062010', border:'#0a3818', text:'#00d4aa', type:'pts',  pts:100 }, // 5
+      { icon:'',    label:'Try Again',  color:'#101016', border:'#1a1a28', text:'#333',    type:'none', pts:0   }, // 6
+      { icon:'🪙',  label:'+50 pts',    color:'#081a0a', border:'#0d3015', text:'#00d4aa', type:'pts',  pts:50  }, // 7
+      { icon:'✨',  label:'2× Points',  color:'#0a1a08', border:'#153018', text:'#44ff88', type:'2x',   pts:0   }, // 8
+      { icon:'',    label:'Try Again',  color:'#101016', border:'#1a1a28', text:'#333',    type:'none', pts:0   }, // 9
+      { icon:'🍺',  label:'Free Pint!', color:'#1a1000', border:'#3a2400', text:'#ffb400', type:'pint', pts:0   }, // 10
+      { icon:'🪙',  label:'+50 pts',    color:'#081a0a', border:'#0d3015', text:'#00d4aa', type:'pts',  pts:50  }, // 11
+      { icon:'',    label:'Try Again',  color:'#101016', border:'#1a1a28', text:'#333',    type:'none', pts:0   }, // 12
+      { icon:'🥃',  label:'Free Shot!', color:'#1a0c04', border:'#3a1808', text:'#ff6b35', type:'shot', pts:0   }, // 13
+      { icon:'✨',  label:'2× Points',  color:'#0a1a08', border:'#153018', text:'#44ff88', type:'2x',   pts:0   }, // 14
+      { icon:'🪙',  label:'+100 pts',   color:'#062010', border:'#0a3818', text:'#00d4aa', type:'pts',  pts:100 }, // 15
+      { icon:'',    label:'Try Again',  color:'#101016', border:'#1a1a28', text:'#333',    type:'none', pts:0   }, // 16
+      { icon:'🪙',  label:'+50 pts',    color:'#081a0a', border:'#0d3015', text:'#00d4aa', type:'pts',  pts:50  }, // 17
+      { icon:'',    label:'Try Again',  color:'#101016', border:'#1a1a28', text:'#333',    type:'none', pts:0   }, // 18
+      { icon:'🪙',  label:'+200 pts',   color:'#042d0c', border:'#065018', text:'#00ffaa', type:'pts',  pts:200 }, // 19
+    ];
+
+    const N     = SEGS.length;
+    const SLICE = (2 * Math.PI) / N;
+
+    // ── State ─────────────────────────────────────────────────
+    let angle      = -Math.PI / 2;
+    let spinning   = false;
+    let gameActive = false;
+    let lastResult = null;
+
+    // ── Draw ──────────────────────────────────────────────────
+    function drawBg() {
+      const g = ctx.createRadialGradient(CX, CY, R * 0.1, CX, CY, R * 1.6);
+      g.addColorStop(0, '#0f0f18');
+      g.addColorStop(1, '#0a0a0a');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, CW, CH);
+    }
+
+    function drawWheel(rot) {
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,212,170,0.12)';
+      ctx.shadowBlur  = 20;
+      ctx.beginPath();
+      ctx.arc(CX, CY, R + 3, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(0,212,170,0.18)';
+      ctx.lineWidth   = 2.5;
+      ctx.stroke();
+      ctx.restore();
+
+      for (let i = 0; i < N; i++) {
+        const seg   = SEGS[i];
+        const start = rot + i * SLICE;
+        const end   = start + SLICE;
+
+        ctx.beginPath();
+        ctx.moveTo(CX, CY);
+        ctx.arc(CX, CY, R, start, end);
+        ctx.closePath();
+        ctx.fillStyle   = seg.color;
+        ctx.fill();
+        ctx.strokeStyle = seg.border;
+        ctx.lineWidth   = 1;
+        ctx.stroke();
+
+        const mid = start + SLICE / 2;
+        const tx  = CX + Math.cos(mid) * R * 0.68;
+        const ty  = CY + Math.sin(mid) * R * 0.68;
+
+        ctx.save();
+        ctx.translate(tx, ty);
+        ctx.rotate(mid + Math.PI / 2);
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+
+        if (seg.icon) {
+          ctx.font = `${Math.round(11 * S)}px Segoe UI, system-ui, sans-serif`;
+          ctx.fillText(seg.icon, 0, -9);
+        }
+
+        ctx.fillStyle = seg.text;
+        ctx.font      = `bold ${Math.round(9 * S)}px Segoe UI, system-ui, sans-serif`;
+        ctx.fillText(seg.label, 0, seg.icon ? 4 : 0);
+
+        ctx.restore();
+      }
+
+      ctx.beginPath();
+      ctx.arc(CX, CY, R, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth   = 1.5;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(CX, CY, R * 0.1, 0, 2 * Math.PI);
+      ctx.fillStyle = '#0a0a0a';
+      ctx.fill();
+      ctx.strokeStyle = '#00d4aa';
+      ctx.lineWidth   = 2;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(CX, CY, R * 0.035, 0, 2 * Math.PI);
+      ctx.fillStyle = '#00d4aa';
+      ctx.fill();
+    }
+
+    function drawPointer() {
+      const pw = Math.round(13 * S);
+      const ph = Math.round(20 * S);
+      const py = CY - R - 2;
+
+      ctx.save();
+      ctx.shadowColor = '#00d4aa';
+      ctx.shadowBlur  = 10;
+      ctx.beginPath();
+      ctx.moveTo(CX, py + ph);
+      ctx.lineTo(CX - pw, py - 2);
+      ctx.lineTo(CX + pw, py - 2);
+      ctx.closePath();
+      ctx.fillStyle = '#00d4aa';
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function frame(rot) {
+      drawBg();
+      drawWheel(rot);
+      drawPointer();
+    }
+
+    // ── Spin ──────────────────────────────────────────────────
+    function easeOut(t) { return 1 - Math.pow(1 - t, 4); }
+
+    function spinTo(segIndex, onDone) {
+      spinning = true;
+      document.getElementById('spinBtn').disabled = true;
+
+      const start   = angle;
+      const pointer = -Math.PI / 2;
+      let   target  = pointer - (segIndex + 0.5) * SLICE;
+      while (target < start + 7 * Math.PI) target += 2 * Math.PI;
+
+      const duration = 4600;
+      let   t0       = null;
+
+      function animate(ts) {
+        if (!t0) t0 = ts;
+        const t   = Math.min((ts - t0) / duration, 1);
+        angle = start + (target - start) * easeOut(t);
+        frame(angle);
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          angle    = target;
+          spinning = false;
+          onDone();
+        }
+      }
+      requestAnimationFrame(animate);
+    }
+
+    // ── Confetti ──────────────────────────────────────────────
+    const confCanvas = document.getElementById('confetti');
+    const confCtx    = confCanvas.getContext('2d');
+    let   confRafId  = null;
+
+    const CONF_COLORS = {
+      pint: ['#ffb400','#ffd060','#ff8c00','rgba(255,255,255,0.7)'],
+      shot: ['#ff6b35','#ff9060','#ffb400','rgba(255,255,255,0.7)'],
+      pts:  ['#00d4aa','#44ff88','#00ffaa','rgba(255,255,255,0.7)'],
+      '2x': ['#44ff88','#00d4aa','#ffb400','rgba(255,255,255,0.7)'],
+    };
+
+    function launchConfetti(type) {
+      confCanvas.width  = window.innerWidth;
+      confCanvas.height = window.innerHeight;
+      const colors = CONF_COLORS[type] || CONF_COLORS.pts;
+      const pieces = [];
+
+      for (let i = 0; i < 160; i++) {
+        pieces.push({
+          x:  Math.random() * confCanvas.width,
+          y:  -20 - Math.random() * 160,
+          vx: (Math.random() - 0.5) * 5.5,
+          vy: 1.6 + Math.random() * 3.8,
+          rot:   Math.random() * 360,
+          rotV:  (Math.random() - 0.5) * 9,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          w: 5 + Math.random() * 8,
+          h: 9 + Math.random() * 12,
+          circle: Math.random() > 0.7,
+        });
+      }
+
+      if (confRafId) cancelAnimationFrame(confRafId);
+      const t0  = performance.now();
+      const dur = 3800;
+
+      function tick(now) {
+        const elapsed  = now - t0;
+        const fadeAlpha = elapsed > dur * 0.6 ? 1 - (elapsed - dur * 0.6) / (dur * 0.4) : 1;
+
+        confCtx.clearRect(0, 0, confCanvas.width, confCanvas.height);
+
+        for (const p of pieces) {
+          p.x   += p.vx;
+          p.y   += p.vy;
+          p.vy  += 0.06;
+          p.rot += p.rotV;
+
+          confCtx.save();
+          confCtx.globalAlpha = Math.max(0, fadeAlpha);
+          confCtx.translate(p.x, p.y);
+          confCtx.rotate(p.rot * Math.PI / 180);
+          confCtx.fillStyle = p.color;
+
+          if (p.circle) {
+            confCtx.beginPath();
+            confCtx.arc(0, 0, p.w / 2, 0, 2 * Math.PI);
+            confCtx.fill();
+          } else {
+            confCtx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+          }
+
+          confCtx.restore();
+        }
+
+        if (elapsed < dur) {
+          confRafId = requestAnimationFrame(tick);
+        } else {
+          confCtx.clearRect(0, 0, confCanvas.width, confCanvas.height);
+          confRafId = null;
+        }
+      }
+
+      confRafId = requestAnimationFrame(tick);
+    }
+
+    function stopConfetti() {
+      if (confRafId) { cancelAnimationFrame(confRafId); confRafId = null; }
+      confCtx.clearRect(0, 0, confCanvas.width, confCanvas.height);
+    }
+
+    // ── Prize Flash ───────────────────────────────────────────
+    let flashTimer   = null;
+    let flashDone    = false;
+
+    const FLASH_CFG = {
+      pint: { emoji:'🍺', title:'FREE PINT!',      sub:'Lucky you!',          color:'#ffb400', glow:'rgba(255,180,0,0.35)' },
+      shot: { emoji:'🥃', title:'FREE SHOT!',      sub:'Cheers!',             color:'#ff6b35', glow:'rgba(255,107,53,0.35)' },
+      pts:  { emoji:'🪙', title:'POINTS WON!',     sub:'Added to your account!', color:'#00d4aa', glow:'rgba(0,212,170,0.35)' },
+      '2x': { emoji:'✨', title:'DOUBLE POINTS!',  sub:'Next order is 2×!',   color:'#44ff88', glow:'rgba(68,255,136,0.35)' },
+    };
+
+    function showPrizeFlash(seg) {
+      flashDone = false;
+      const cfg = FLASH_CFG[seg.type] || FLASH_CFG.pts;
+
+      // Personalise pts label with actual amount
+      const title = seg.type === 'pts' ? `+${seg.pts} POINTS!` : cfg.title;
+
+      document.getElementById('flashEmoji').textContent = cfg.emoji;
+      document.getElementById('flashTitle').textContent = title;
+      document.getElementById('flashTitle').style.color = cfg.color;
+      document.getElementById('flashSub').textContent   = cfg.sub;
+      document.getElementById('flashGlow').style.background = cfg.glow;
+
+      const fl = document.getElementById('prizeFlash');
+      fl.classList.remove('hidden', 'fade-out');
+
+      flashTimer = setTimeout(proceedFromFlash, 2400);
+    }
+
+    function skipFlash() {
+      if (flashDone) return;
+      clearTimeout(flashTimer);
+      proceedFromFlash();
+    }
+
+    function proceedFromFlash() {
+      if (flashDone) return;
+      flashDone = true;
+      const fl = document.getElementById('prizeFlash');
+      fl.classList.add('fade-out');
+      setTimeout(() => {
+        fl.classList.add('hidden');
+        fl.classList.remove('fade-out');
+        showEndOverlay();
+      }, 360);
+    }
+
+    function showEndOverlay() {
+      const ov   = document.getElementById('endOverlay');
+      const card = ov.querySelector('.card');
+      card.classList.remove('card-enter');
+      ov.classList.remove('hidden');
+      requestAnimationFrame(() => requestAnimationFrame(() => card.classList.add('card-enter')));
+    }
+
+    // ── Flow ──────────────────────────────────────────────────
+    function launchGame() {
+      document.getElementById('startOverlay').classList.add('hidden');
+      gameActive = true;
+      document.getElementById('spinBtn').disabled = false;
+      frame(angle);
+    }
+
+    function doSpin(forcedSeg) {
+      if (spinning || !gameActive) return;
+      const seg = forcedSeg !== undefined ? forcedSeg : Math.floor(Math.random() * N);
+      spinTo(seg, () => onDone(SEGS[seg]));
+    }
+
+    function forceDemo(type) {
+      document.getElementById('startOverlay').classList.add('hidden');
+      gameActive = true;
+      frame(angle);
+      let idx;
+      if      (type === 'pint')   idx = 10;
+      else if (type === 'shot')   idx = 4;
+      else if (type === 'pts200') idx = 19;
+      else                         idx = 1;
+      setTimeout(() => doSpin(idx), 300);
+    }
+
+    function onDone(seg) {
+      lastResult = seg;
+
+      // Update pill
+      const pill = document.getElementById('tokenPill');
+      if      (seg.type === 'pint') pill.textContent = '🍺 Free Pint!';
+      else if (seg.type === 'shot') pill.textContent = '🥃 Free Shot!';
+      else if (seg.type === '2x')   pill.textContent = '✨ 2× Points!';
+      else if (seg.type === 'pts')  pill.textContent = `🪙 +${seg.pts} pts!`;
+      else                          pill.textContent = '🎡 Better luck next time';
+
+      // Build end overlay content
+      let emoji, title, titleCls, sub, btnText, btnCls;
+
+      if (seg.type === 'pint') {
+        emoji = '🍺'; title = 'Free Pint — on us!';   titleCls = 'pint';
+        sub   = 'Enter your details and choose your pint at the bar.';
+        btnText = 'Claim My Free Pint'; btnCls = 'claim-btn c-pint';
+      } else if (seg.type === 'shot') {
+        emoji = '🥃'; title = 'Free Shot — cheers!';  titleCls = 'shot';
+        sub   = 'Enter your details and choose your shot at the bar.';
+        btnText = 'Claim My Free Shot'; btnCls = 'claim-btn c-shot';
+      } else if (seg.type === '2x') {
+        emoji = '✨'; title = '2× Points Next Order!'; titleCls = 'pts';
+        sub   = 'Double loyalty points on your next purchase. Enter your details to save.';
+        btnText = 'Claim 2× Points'; btnCls = 'claim-btn c-pts';
+      } else if (seg.type === 'pts') {
+        emoji = '🪙'; title = `+${seg.pts} Points!`;  titleCls = 'pts';
+        sub   = `${seg.pts} loyalty points added to your Anthic account.`;
+        btnText = `Claim +${seg.pts} Points`; btnCls = 'claim-btn c-pts';
+      } else {
+        emoji = '😅'; title = 'Try Again Next Time';  titleCls = 'none';
+        sub   = 'No worries — spin again next time you order.';
+        btnText = 'Got It'; btnCls = 'claim-btn c-none';
+      }
+
+      document.getElementById('rEmoji').textContent  = emoji;
+      document.getElementById('rTitle').textContent  = title;
+      document.getElementById('rTitle').className    = 'r-title ' + titleCls;
+      document.getElementById('rSub').textContent    = sub;
+      const btn = document.getElementById('claimBtn');
+      btn.textContent = btnText;
+      btn.className   = btnCls;
+
+      // Win → flash + confetti; no-win → straight to capture
+      if (seg.type !== 'none') {
+        launchConfetti(seg.type);
+        setTimeout(() => showPrizeFlash(seg), 300);
+      } else {
+        setTimeout(showEndOverlay, 700);
+      }
+    }
+
+    function submitCapture() {
+      const email = document.getElementById('emailInput').value.trim();
+      const phone = document.getElementById('phoneInput').value.trim();
+      const err   = document.getElementById('errorMsg');
+      if (!email && !phone) { err.style.display = 'block'; return; }
+      err.style.display = 'none';
+      document.getElementById('endOverlay').classList.add('hidden');
+
+      const t = lastResult ? lastResult.type : 'none';
+      if      (t === 'pint') document.getElementById('drinkOverlay').classList.remove('hidden');
+      else if (t === 'shot') document.getElementById('shotOverlay').classList.remove('hidden');
+      else                   showConfirmed();
+    }
+
+    function confirmChoice(name, emoji) {
+      document.getElementById('drinkOverlay').classList.add('hidden');
+      document.getElementById('shotOverlay').classList.add('hidden');
+      document.getElementById('confEmoji').textContent = emoji;
+      document.getElementById('confTitle').textContent = `Enjoy your ${name}!`;
+      document.getElementById('confSub').textContent   = 'Show this screen at the bar to claim.';
+      document.getElementById('confNote').textContent  = '';
+      document.getElementById('confirmedOverlay').classList.remove('hidden');
+    }
+
+    function showConfirmed() {
+      const seg = lastResult;
+      let emoji, title, sub, note;
+      if (seg && seg.type === '2x') {
+        emoji = '✨'; title = '2× Points Unlocked!';
+        sub   = 'Double points will apply automatically on your next order.';
+        note  = 'Saved to your Anthic account';
+      } else if (seg && seg.type === 'pts') {
+        emoji = '🪙'; title = `+${seg.pts} Points Added!`;
+        sub   = 'Points have been added to your Anthic loyalty account.';
+        note  = `Balance updated — keep earning!`;
+      } else {
+        emoji = '🎡'; title = 'Spin Again Soon!';
+        sub   = 'No prize this time — come back next order.';
+        note  = '';
+      }
+      document.getElementById('confEmoji').textContent = emoji;
+      document.getElementById('confTitle').textContent = title;
+      document.getElementById('confSub').textContent   = sub;
+      document.getElementById('confNote').textContent  = note;
+      document.getElementById('confirmedOverlay').classList.remove('hidden');
+    }
+
+    function replayGame() {
+      stopConfetti();
+      document.getElementById('confirmedOverlay').classList.add('hidden');
+      document.getElementById('emailInput').value = '';
+      document.getElementById('phoneInput').value = '';
+      document.getElementById('errorMsg').style.display = 'none';
+      document.getElementById('tokenPill').textContent = '🎡 Spin to win!';
+      document.getElementById('endOverlay').querySelector('.card').classList.remove('card-enter');
+      lastResult = null;
+      gameActive = false;
+      document.getElementById('spinBtn').disabled = true;
+      document.getElementById('startOverlay').classList.remove('hidden');
+    }
+
+    // Initial render
+    frame(angle);
+  </script>
+</body>
+</html>

@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Anthic — Trivia Rewards</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0a0a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #fff;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    .header {
+      width: 100%;
+      height: 52px;
+      background: rgba(10,10,10,0.97);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .logo { font-size: 20px; font-weight: 800; color: #00d4aa; letter-spacing: 2px; }
+
+    .token-pill {
+      background: rgba(0,212,170,0.1);
+      border: 1px solid rgba(0,212,170,0.35);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #00d4aa;
+    }
+
+    /* ── Shared overlay ── */
+    .overlay {
+      position: fixed;
+      top: 52px; left: 0; right: 0; bottom: 0;
+      background: rgba(10,10,10,0.97);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .overlay.hidden { display: none; }
+
+    .card {
+      background: #111;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .divider { border: none; border-top: 1px solid rgba(255,255,255,0.07); }
+
+    /* ── Start overlay ── */
+    .start-hero { text-align: center; }
+    .start-hero .drinks { font-size: 48px; line-height: 1; margin-bottom: 10px; }
+    .start-hero h2 { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+    .start-hero p { font-size: 13px; color: #666; line-height: 1.5; }
+
+    .score-target {
+      background: rgba(0,212,170,0.07);
+      border: 1px solid rgba(0,212,170,0.2);
+      border-radius: 12px;
+      padding: 14px 16px;
+      text-align: center;
+      font-size: 14px;
+      color: #aaa;
+      line-height: 1.6;
+    }
+
+    .score-target strong { color: #00d4aa; }
+
+    .play-btn {
+      width: 100%;
+      background: #00d4aa;
+      color: #000;
+      font-size: 16px;
+      font-weight: 800;
+      border: none;
+      border-radius: 12px;
+      padding: 16px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .play-btn:active { opacity: 0.85; }
+
+    .demo-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-top: 2px;
+    }
+
+    .demo-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #2a2a2a;
+      flex-shrink: 0;
+    }
+
+    .demo-btn {
+      flex: 1;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 8px;
+      color: #444;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 9px 6px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .demo-btn-win { border-color: rgba(0,212,170,0.18); color: #00d4aa; }
+
+    /* ── Game screen ── */
+    #gameScreen {
+      position: fixed;
+      top: 52px; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      gap: 16px;
+      overflow-y: auto;
+    }
+
+    #gameScreen.hidden { display: none; }
+
+    /* Progress + timer */
+    .game-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .q-counter {
+      font-size: 13px;
+      font-weight: 700;
+      color: #555;
+      flex-shrink: 0;
+    }
+
+    .q-counter span { color: #fff; }
+
+    .timer-wrap {
+      flex: 1;
+      background: rgba(255,255,255,0.06);
+      border-radius: 6px;
+      height: 8px;
+      overflow: hidden;
+    }
+
+    .timer-bar {
+      height: 100%;
+      border-radius: 6px;
+      background: #00d4aa;
+      transition: width 1s linear, background 0.3s;
+    }
+
+    .timer-bar.warning { background: #ffb400; }
+    .timer-bar.danger  { background: #ff5a5a; }
+
+    .timer-count {
+      font-size: 13px;
+      font-weight: 700;
+      color: #555;
+      flex-shrink: 0;
+      min-width: 24px;
+      text-align: right;
+    }
+
+    .timer-count.warning { color: #ffb400; }
+    .timer-count.danger  { color: #ff5a5a; }
+
+    /* Score bar */
+    .score-bar {
+      display: flex;
+      gap: 5px;
+    }
+
+    .score-dot {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.07);
+      transition: background 0.3s;
+    }
+
+    .score-dot.correct { background: #00d4aa; }
+    .score-dot.wrong   { background: #ff5a5a; }
+    .score-dot.skipped { background: #333; }
+
+    /* Category badge */
+    .cat-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 20px;
+      align-self: flex-start;
+    }
+
+    .cat-food    { background: rgba(255,180,0,0.12); color: #ffb400; }
+    .cat-general { background: rgba(100,160,255,0.12); color: #64a0ff; }
+
+    /* Question card */
+    .question-card {
+      background: #111;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .question-text {
+      font-size: clamp(16px, 4.5vw, 20px);
+      font-weight: 700;
+      line-height: 1.4;
+      color: #fff;
+    }
+
+    /* Answer grid */
+    .answers {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .ans-btn {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 12px;
+      padding: 16px 12px;
+      font-size: clamp(13px, 3.5vw, 15px);
+      font-weight: 600;
+      color: #ccc;
+      cursor: pointer;
+      text-align: center;
+      line-height: 1.3;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .ans-btn:active:not(.disabled) {
+      background: rgba(255,255,255,0.1);
+    }
+
+    .ans-btn.correct {
+      background: rgba(0,212,170,0.15);
+      border-color: #00d4aa;
+      color: #00d4aa;
+    }
+
+    .ans-btn.wrong {
+      background: rgba(255,90,90,0.15);
+      border-color: #ff5a5a;
+      color: #ff5a5a;
+    }
+
+    .ans-btn.reveal {
+      background: rgba(0,212,170,0.08);
+      border-color: rgba(0,212,170,0.4);
+      color: rgba(0,212,170,0.7);
+    }
+
+    .ans-btn.disabled { cursor: default; }
+
+    /* Feedback bar */
+    .feedback-bar {
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      display: none;
+    }
+
+    .feedback-bar.correct { background: rgba(0,212,170,0.12); color: #00d4aa; border: 1px solid rgba(0,212,170,0.25); }
+    .feedback-bar.wrong   { background: rgba(255,90,90,0.12);  color: #ff5a5a; border: 1px solid rgba(255,90,90,0.25); }
+    .feedback-bar.timeout { background: rgba(255,180,0,0.12);  color: #ffb400; border: 1px solid rgba(255,180,0,0.25); }
+
+    /* ── End / capture overlay ── */
+    .result-score-label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 6px;
+      text-align: center;
+    }
+
+    .result-score-big {
+      font-size: 46px;
+      font-weight: 800;
+      text-align: center;
+      line-height: 1;
+    }
+
+    .result-score-big.win  { color: #00d4aa; }
+    .result-score-big.lose { color: #fff; }
+
+    .progress-wrap {
+      background: rgba(255,255,255,0.06);
+      border-radius: 6px;
+      height: 8px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+
+    .progress-fill { height: 100%; border-radius: 6px; }
+    .progress-fill.win  { background: #00d4aa; }
+    .progress-fill.lose { background: #ffb400; }
+
+    .progress-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 5px;
+      font-size: 10px;
+      color: #444;
+    }
+
+    .result-badge {
+      text-align: center;
+      padding: 14px;
+      border-radius: 12px;
+    }
+
+    .result-badge.win  { background: rgba(0,212,170,0.08);  border: 1px solid rgba(0,212,170,0.2); }
+    .result-badge.lose { background: rgba(255,180,0,0.06);  border: 1px solid rgba(255,180,0,0.15); }
+
+    .result-badge .badge-emoji { font-size: 30px; }
+    .result-badge .badge-text  { font-size: 15px; font-weight: 700; color: #fff; margin-top: 6px; }
+    .result-badge .badge-sub   { font-size: 12px; color: #666; margin-top: 4px; }
+
+    .field-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #444;
+      margin-bottom: 7px;
+    }
+
+    .input-wrap { display: flex; flex-direction: column; gap: 10px; }
+
+    .phone-row { display: flex; gap: 8px; }
+
+    select.country-code {
+      width: 80px; flex-shrink: 0;
+      background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: #fff; font-size: 14px;
+      padding: 13px 8px;
+      outline: none; -webkit-appearance: none;
+    }
+
+    input[type="email"], input[type="tel"] {
+      width: 100%;
+      background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: #fff; font-size: 15px;
+      padding: 13px 16px;
+      outline: none; -webkit-appearance: none;
+    }
+
+    input:focus, select:focus { border-color: #00d4aa; }
+    input::placeholder { color: #333; }
+
+    .error-msg { font-size: 12px; color: #ff5a5a; display: none; }
+
+    .claim-btn {
+      width: 100%; background: #00d4aa; color: #000;
+      font-size: 15px; font-weight: 800;
+      border: none; border-radius: 12px;
+      padding: 16px; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .claim-btn:active { opacity: 0.85; }
+    .privacy { font-size: 11px; color: #333; text-align: center; line-height: 1.5; }
+
+    /* ── Drink choice ── */
+    .drink-hero { text-align: center; }
+    .drink-hero .drink-title { font-size: 18px; font-weight: 800; color: #fff; }
+    .drink-hero .drink-sub   { font-size: 13px; color: #555; margin-top: 6px; }
+
+    .drink-options { display: flex; gap: 14px; }
+
+    .drink-btn {
+      flex: 1;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 28px 12px;
+      cursor: pointer;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 10px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .drink-btn:active { border-color: #00d4aa; background: rgba(0,212,170,0.08); }
+
+    .drink-emoji { font-size: 52px; line-height: 1; }
+    .drink-name  { font-size: 14px; font-weight: 700; color: #fff; }
+
+    /* ── Confirmed ── */
+    .confirmed-hero {
+      text-align: center;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 12px;
+    }
+
+    .confirmed-emoji  { font-size: 72px; line-height: 1; }
+    .confirmed-title  { font-size: 20px; font-weight: 800; color: #fff; }
+    .confirmed-sub    { font-size: 13px; color: #666; line-height: 1.6; }
+    .confirmed-tokens { font-size: 15px; font-weight: 700; color: #00d4aa; }
+
+    .replay-btn {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      color: #aaa; font-size: 14px; font-weight: 600;
+      padding: 14px; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">anthic</div>
+    <div class="token-pill" id="tokenPill">🪙 1 token</div>
+  </div>
+
+  <!-- ── Start overlay ── -->
+  <div class="overlay" id="startOverlay">
+    <div class="card">
+      <div class="start-hero">
+        <div class="drinks">🧠</div>
+        <h2>Pub Quiz — Win a free drink!</h2>
+        <p>10 questions. Mix of general knowledge and food &amp; drink.</p>
+      </div>
+      <div class="score-target">
+        You've already earned <strong>1 🪙 token</strong>.<br>
+        Score <strong>8 / 10</strong> to win a free <strong>🍺 pint or 🍷 glass of wine</strong>.
+      </div>
+      <button class="play-btn" onclick="startGame()">Let's Play ▶</button>
+      <div class="demo-row">
+        <span class="demo-label">Demo</span>
+        <button class="demo-btn" onclick="forceDemo('lose')">Test Lose</button>
+        <button class="demo-btn demo-btn-win" onclick="forceDemo('win')">Test Win</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Game screen ── -->
+  <div id="gameScreen" class="hidden">
+    <div class="game-meta">
+      <div class="q-counter">Q <span id="qNum">1</span> / 10</div>
+      <div class="timer-wrap">
+        <div class="timer-bar" id="timerBar"></div>
+      </div>
+      <div class="timer-count" id="timerCount">15</div>
+    </div>
+
+    <div class="score-bar" id="scoreDots"></div>
+
+    <div class="question-card">
+      <div class="cat-badge" id="catBadge">Food &amp; Drink</div>
+      <div class="question-text" id="questionText">Question goes here</div>
+      <div class="answers" id="answers"></div>
+      <div class="feedback-bar" id="feedbackBar"></div>
+    </div>
+  </div>
+
+  <!-- ── End capture overlay ── -->
+  <div class="overlay hidden" id="endOverlay">
+    <div class="card">
+      <div id="resultHero"></div>
+      <hr class="divider">
+      <div class="input-wrap">
+        <div>
+          <div class="field-label">Email</div>
+          <input type="email" id="emailInput" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div>
+          <div class="field-label">Phone</div>
+          <div class="phone-row">
+            <select class="country-code" id="countryCode">
+              <option value="+353">🇮🇪 +353</option>
+              <option value="+44">🇬🇧 +44</option>
+              <option value="+1">🇺🇸 +1</option>
+              <option value="+49">🇩🇪 +49</option>
+              <option value="+33">🇫🇷 +33</option>
+              <option value="+34">🇪🇸 +34</option>
+              <option value="+39">🇮🇹 +39</option>
+              <option value="+31">🇳🇱 +31</option>
+              <option value="+61">🇦🇺 +61</option>
+            </select>
+            <input type="tel" id="phoneInput" placeholder="087 123 4567" autocomplete="tel">
+          </div>
+        </div>
+        <div class="error-msg" id="errorMsg">Please enter your email or phone number.</div>
+      </div>
+      <button class="claim-btn" id="claimBtn">Claim My Reward</button>
+      <div class="privacy">No spam. Your details are used only to deliver your reward.</div>
+    </div>
+  </div>
+
+  <!-- ── Drink choice overlay ── -->
+  <div class="overlay hidden" id="drinkOverlay">
+    <div class="card">
+      <div class="drink-hero">
+        <div class="drink-title">Choose your free drink</div>
+        <div class="drink-sub">Show your choice at the bar to claim it</div>
+      </div>
+      <div class="drink-options">
+        <button class="drink-btn" onclick="confirmDrink('pint')">
+          <span class="drink-emoji">🍺</span>
+          <span class="drink-name">Pint</span>
+        </button>
+        <button class="drink-btn" onclick="confirmDrink('wine')">
+          <span class="drink-emoji">🍷</span>
+          <span class="drink-name">Wine</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Confirmed overlay ── -->
+  <div class="overlay hidden" id="confirmedOverlay">
+    <div class="card">
+      <div class="confirmed-hero">
+        <div class="confirmed-emoji" id="confirmedEmoji">🍺</div>
+        <div class="confirmed-title" id="confirmedTitle">Enjoy your pint!</div>
+        <div class="confirmed-sub">Show this screen at the bar to claim your free drink.</div>
+        <div class="confirmed-tokens" id="confirmedTokens"></div>
+      </div>
+      <button class="replay-btn" onclick="replayGame()">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    // ── Questions ─────────────────────────────────────────────
+    const QUESTIONS = [
+      {
+        cat: 'food',
+        q: 'Which country produces the most coffee in the world?',
+        answers: ['Colombia', 'Brazil', 'Ethiopia', 'Vietnam'],
+        correct: 1
+      },
+      {
+        cat: 'general',
+        q: 'How many players are on a standard football (soccer) team?',
+        answers: ['9', '10', '11', '12'],
+        correct: 2
+      },
+      {
+        cat: 'food',
+        q: 'What spirit is the base of a classic Margarita?',
+        answers: ['Vodka', 'Rum', 'Gin', 'Tequila'],
+        correct: 3
+      },
+      {
+        cat: 'general',
+        q: 'What is the capital city of Canada?',
+        answers: ['Toronto', 'Vancouver', 'Ottawa', 'Montreal'],
+        correct: 2
+      },
+      {
+        cat: 'food',
+        q: 'Which cheese is traditionally used on a Margherita pizza?',
+        answers: ['Cheddar', 'Gouda', 'Parmesan', 'Mozzarella'],
+        correct: 3
+      },
+      {
+        cat: 'general',
+        q: 'How many strings does a standard guitar have?',
+        answers: ['4', '5', '6', '7'],
+        correct: 2
+      },
+      {
+        cat: 'food',
+        q: 'Guinness stout originates from which city?',
+        answers: ['Cork', 'Belfast', 'Dublin', 'Galway'],
+        correct: 2
+      },
+      {
+        cat: 'general',
+        q: 'In what year did the Titanic sink?',
+        answers: ['1908', '1910', '1912', '1916'],
+        correct: 2
+      },
+      {
+        cat: 'food',
+        q: 'What is the main ingredient in a traditional hummus?',
+        answers: ['Lentils', 'Chickpeas', 'Black beans', 'Edamame'],
+        correct: 1
+      },
+      {
+        cat: 'general',
+        q: 'What is the longest river in the world?',
+        answers: ['Amazon', 'Yangtze', 'Mississippi', 'Nile'],
+        correct: 3
+      }
+    ];
+
+    const WIN_SCORE   = 8;
+    const TIMER_SECS  = 15;
+
+    let currentQ  = 0;
+    let score     = 0;
+    let dotStates = [];
+    let timerInterval = null;
+    let timeLeft  = TIMER_SECS;
+    let answered  = false;
+
+    // ── Token helpers ─────────────────────────────────────────
+    function bonusTokens(s) {
+      if (s >= 8) return 3;
+      if (s >= 5) return 2;
+      if (s >= 2) return 1;
+      return 0;
+    }
+
+    function updatePill(s) {
+      const t = 1 + bonusTokens(s);
+      document.getElementById('tokenPill').textContent = '🪙 ' + t + (t === 1 ? ' token' : ' tokens');
+    }
+
+    // ── Flow ──────────────────────────────────────────────────
+    function startGame() {
+      document.getElementById('startOverlay').classList.add('hidden');
+      currentQ   = 0;
+      score      = 0;
+      dotStates  = Array(10).fill('');
+      buildScoreDots();
+      document.getElementById('gameScreen').classList.remove('hidden');
+      loadQuestion();
+    }
+
+    function forceDemo(result) {
+      document.getElementById('startOverlay').classList.add('hidden');
+      const s = result === 'win' ? 9 : 3;
+      showEndOverlay(s, Array(10).fill('').map((_, i) => i < s ? 'correct' : 'wrong'));
+    }
+
+    function buildScoreDots() {
+      const el = document.getElementById('scoreDots');
+      el.innerHTML = '';
+      for (let i = 0; i < 10; i++) {
+        const d = document.createElement('div');
+        d.className = 'score-dot';
+        d.id = 'dot-' + i;
+        el.appendChild(d);
+      }
+    }
+
+    function loadQuestion() {
+      answered = false;
+      clearInterval(timerInterval);
+      timeLeft = TIMER_SECS;
+
+      const q = QUESTIONS[currentQ];
+
+      document.getElementById('qNum').textContent        = currentQ + 1;
+      document.getElementById('questionText').textContent = q.q;
+
+      const badge = document.getElementById('catBadge');
+      badge.textContent = q.cat === 'food' ? '🍔 Food & Drink' : '🌍 General Knowledge';
+      badge.className   = 'cat-badge ' + (q.cat === 'food' ? 'cat-food' : 'cat-general');
+
+      const answersEl = document.getElementById('answers');
+      answersEl.innerHTML = '';
+      q.answers.forEach((a, i) => {
+        const btn = document.createElement('button');
+        btn.className   = 'ans-btn';
+        btn.textContent = a;
+        btn.onclick     = () => selectAnswer(i);
+        answersEl.appendChild(btn);
+      });
+
+      document.getElementById('feedbackBar').style.display = 'none';
+      document.getElementById('feedbackBar').className     = 'feedback-bar';
+
+      startTimer();
+    }
+
+    function startTimer() {
+      const bar   = document.getElementById('timerBar');
+      const count = document.getElementById('timerCount');
+
+      bar.style.transition = 'none';
+      bar.style.width      = '100%';
+      bar.className        = 'timer-bar';
+      count.className      = 'timer-count';
+      count.textContent    = TIMER_SECS;
+
+      // Force reflow so transition fires
+      bar.getBoundingClientRect();
+      bar.style.transition = 'width 1s linear';
+
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        bar.style.width = (timeLeft / TIMER_SECS * 100) + '%';
+        count.textContent = timeLeft;
+
+        if (timeLeft <= 5) {
+          bar.className   = 'timer-bar danger';
+          count.className = 'timer-count danger';
+        } else if (timeLeft <= 8) {
+          bar.className   = 'timer-bar warning';
+          count.className = 'timer-count warning';
+        }
+
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          onTimeout();
+        }
+      }, 1000);
+    }
+
+    function onTimeout() {
+      if (answered) return;
+      answered = true;
+      dotStates[currentQ] = 'skipped';
+      revealCorrect('timeout');
+      showFeedback('timeout', '⏰ Time\'s up! ' + QUESTIONS[currentQ].answers[QUESTIONS[currentQ].correct] + ' was the answer.');
+      setTimeout(advance, 1800);
+    }
+
+    function selectAnswer(idx) {
+      if (answered) return;
+      answered = true;
+      clearInterval(timerInterval);
+
+      const q       = QUESTIONS[currentQ];
+      const buttons = document.getElementById('answers').children;
+      const isRight = idx === q.correct;
+
+      if (isRight) {
+        score++;
+        dotStates[currentQ] = 'correct';
+        buttons[idx].classList.add('correct');
+        showFeedback('correct', '✓ Correct!');
+      } else {
+        dotStates[currentQ] = 'wrong';
+        buttons[idx].classList.add('wrong');
+        revealCorrect(idx);
+        showFeedback('wrong', '✗ Not quite — the answer was ' + q.answers[q.correct]);
+      }
+
+      buttons[idx].classList.add('disabled');
+      updateDot(currentQ, dotStates[currentQ]);
+      updatePill(score);
+      setTimeout(advance, 1600);
+    }
+
+    function revealCorrect(selectedIdx) {
+      const q       = QUESTIONS[currentQ];
+      const buttons = document.getElementById('answers').children;
+      Array.from(buttons).forEach((b, i) => {
+        b.classList.add('disabled');
+        if (i === q.correct) b.classList.add(selectedIdx === 'timeout' ? 'correct' : 'reveal');
+      });
+    }
+
+    function showFeedback(type, msg) {
+      const el = document.getElementById('feedbackBar');
+      el.className     = 'feedback-bar ' + type;
+      el.textContent   = msg;
+      el.style.display = 'block';
+    }
+
+    function updateDot(idx, state) {
+      const d = document.getElementById('dot-' + idx);
+      if (d) d.className = 'score-dot ' + state;
+    }
+
+    function advance() {
+      currentQ++;
+      if (currentQ >= QUESTIONS.length) {
+        document.getElementById('gameScreen').classList.add('hidden');
+        showEndOverlay(score, dotStates);
+      } else {
+        loadQuestion();
+      }
+    }
+
+    // ── End flow ──────────────────────────────────────────────
+    function showEndOverlay(sc, dots) {
+      updatePill(sc);
+      const win   = sc >= WIN_SCORE;
+      const bonus = bonusTokens(sc);
+      const pct   = Math.round((sc / 10) * 100);
+      const cls   = win ? 'win' : 'lose';
+
+      // Score dots summary
+      const dotsHtml = (dots || []).map(s =>
+        `<div class="score-dot ${s}" style="height:8px;border-radius:3px;flex:1;background:${s==='correct'?'#00d4aa':s==='wrong'?'#ff5a5a':'#333'}"></div>`
+      ).join('');
+
+      document.getElementById('resultHero').innerHTML = `
+        <div class="result-score-label">Your Score</div>
+        <div class="result-score-big ${cls}">${sc} / 10</div>
+        <div style="display:flex;gap:5px;margin-top:10px;">${dotsHtml}</div>
+        <div class="progress-labels"><span>0</span><span style="color:rgba(255,255,255,0.2)">▲ 8 to win</span><span>10</span></div>
+        <div class="result-badge ${cls}" style="margin-top:10px;">
+          <div class="badge-emoji">${win ? '🎉' : '🪙'}</div>
+          <div class="badge-text">${win ? 'You won a free drink!' : `${1 + bonus} token${1 + bonus > 1 ? 's' : ''} earned`}</div>
+          <div class="badge-sub">${win ? 'Enter your details below to claim' : (sc < WIN_SCORE ? 'Score 8/10 next time for a free 🍺 or 🍷' : '')}</div>
+        </div>
+      `;
+
+      document.getElementById('claimBtn').textContent = win ? 'Claim My Free Drink ▶' : 'Claim My Tokens ▶';
+      document.getElementById('claimBtn').onclick = () => submitCapture(sc);
+      document.getElementById('endOverlay').classList.remove('hidden');
+    }
+
+    function submitCapture(sc) {
+      const email = document.getElementById('emailInput').value.trim();
+      const phone = document.getElementById('phoneInput').value.trim();
+      const err   = document.getElementById('errorMsg');
+      if (!email && !phone) { err.style.display = 'block'; return; }
+      err.style.display = 'none';
+      document.getElementById('endOverlay').classList.add('hidden');
+      sc >= WIN_SCORE
+        ? document.getElementById('drinkOverlay').classList.remove('hidden')
+        : showNoWinConfirmed(sc);
+    }
+
+    function confirmDrink(choice) {
+      document.getElementById('drinkOverlay').classList.add('hidden');
+      const emoji = choice === 'pint' ? '🍺' : '🍷';
+      const name  = choice === 'pint' ? 'pint' : 'glass of wine';
+      document.getElementById('confirmedEmoji').textContent  = emoji;
+      document.getElementById('confirmedTitle').textContent  = `Enjoy your ${name}!`;
+      document.getElementById('confirmedTokens').textContent = `+ ${1 + bonusTokens(score)} 🪙 tokens added to your account`;
+      document.getElementById('confirmedOverlay').classList.remove('hidden');
+    }
+
+    function showNoWinConfirmed(sc) {
+      const bonus = bonusTokens(sc);
+      document.getElementById('confirmedEmoji').textContent  = '🪙';
+      document.getElementById('confirmedTitle').textContent  = `${1 + bonus} token${1 + bonus > 1 ? 's' : ''} earned!`;
+      document.getElementById('confirmedTokens').textContent = 'Score 8/10 next time to win a free 🍺 or 🍷';
+      document.getElementById('confirmedOverlay').classList.remove('hidden');
+    }
+
+    function replayGame() {
+      document.getElementById('confirmedOverlay').classList.add('hidden');
+      document.getElementById('emailInput').value  = '';
+      document.getElementById('phoneInput').value  = '';
+      document.getElementById('errorMsg').style.display = 'none';
+      document.getElementById('startOverlay').classList.remove('hidden');
+      updatePill(0);
+    }
+  </script>
+</body>
+</html>

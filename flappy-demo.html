@@ -1,0 +1,774 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <title>Anthic â€” Flappy Rewards</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0a0a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      touch-action: none;
+    }
+
+    /* â”€â”€ Header â”€â”€ */
+    .header {
+      width: 100%;
+      height: 52px;
+      background: rgba(10,10,10,0.97);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .logo {
+      font-size: 20px;
+      font-weight: 800;
+      color: #00d4aa;
+      letter-spacing: 2px;
+    }
+
+    .token-pill {
+      background: rgba(0,212,170,0.1);
+      border: 1px solid rgba(0,212,170,0.35);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #00d4aa;
+    }
+
+    canvas { display: block; flex-shrink: 0; }
+
+    /* â”€â”€ Shared overlay â”€â”€ */
+    .overlay {
+      position: fixed;
+      top: 52px; left: 0; right: 0; bottom: 0;
+      background: rgba(10,10,10,0.96);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 20px;
+    }
+
+    .overlay.hidden { display: none; }
+
+    .card {
+      background: #111;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.07);
+    }
+
+    /* â”€â”€ Start overlay â”€â”€ */
+    .start-hero { text-align: center; }
+
+    .start-hero .drinks { font-size: 48px; line-height: 1; margin-bottom: 10px; }
+
+    .start-hero h2 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .start-hero p { font-size: 13px; color: #666; line-height: 1.5; }
+
+    .score-target {
+      background: rgba(0,212,170,0.07);
+      border: 1px solid rgba(0,212,170,0.2);
+      border-radius: 12px;
+      padding: 12px 16px;
+      text-align: center;
+      font-size: 14px;
+      color: #aaa;
+      line-height: 1.5;
+    }
+
+    .score-target strong { color: #00d4aa; }
+
+    .play-btn {
+      width: 100%;
+      background: #00d4aa;
+      color: #000;
+      font-size: 16px;
+      font-weight: 800;
+      border: none;
+      border-radius: 12px;
+      padding: 16px;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .play-btn:active { opacity: 0.85; }
+
+    /* â”€â”€ Demo buttons â”€â”€ */
+    .demo-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-top: 2px;
+    }
+
+    .demo-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #2a2a2a;
+      flex-shrink: 0;
+    }
+
+    .demo-btn {
+      flex: 1;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 8px;
+      color: #444;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 9px 6px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .demo-btn-win { border-color: rgba(0,212,170,0.18); color: #00d4aa; }
+
+    /* â”€â”€ Capture overlay (end) â”€â”€ */
+    .result-hero { text-align: center; }
+
+    .result-score-label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 6px;
+    }
+
+    .result-score-big {
+      font-size: 42px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .result-score-big.win  { color: #00d4aa; }
+    .result-score-big.lose { color: #fff; }
+
+    /* Progress bar */
+    .progress-wrap {
+      background: rgba(255,255,255,0.06);
+      border-radius: 6px;
+      height: 8px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.6s ease;
+    }
+
+    .progress-fill.win  { background: #00d4aa; }
+    .progress-fill.lose { background: #ffb400; }
+
+    .progress-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+      font-size: 10px;
+      color: #444;
+    }
+
+    .result-badge {
+      text-align: center;
+      padding: 14px;
+      border-radius: 12px;
+    }
+
+    .result-badge.win  { background: rgba(0,212,170,0.08); border: 1px solid rgba(0,212,170,0.2); }
+    .result-badge.lose { background: rgba(255,180,0,0.06); border: 1px solid rgba(255,180,0,0.15); }
+
+    .result-badge .badge-emoji { font-size: 32px; }
+
+    .result-badge .badge-text {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      margin-top: 6px;
+    }
+
+    .result-badge .badge-sub {
+      font-size: 12px;
+      color: #666;
+      margin-top: 3px;
+    }
+
+    /* â”€â”€ Form fields â”€â”€ */
+    .field-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #444;
+      margin-bottom: 7px;
+    }
+
+    .input-wrap { display: flex; flex-direction: column; gap: 10px; }
+
+    .phone-row { display: flex; gap: 8px; }
+
+    select.country-code {
+      width: 80px;
+      flex-shrink: 0;
+      background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 14px;
+      padding: 13px 8px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="email"],
+    input[type="tel"] {
+      width: 100%;
+      background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 15px;
+      padding: 13px 16px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="email"]:focus,
+    input[type="tel"]:focus,
+    select.country-code:focus {
+      border-color: #00d4aa;
+    }
+
+    input::placeholder { color: #333; }
+
+    .error-msg {
+      font-size: 12px;
+      color: #ff5a5a;
+      display: none;
+    }
+
+    .claim-btn {
+      width: 100%;
+      background: #00d4aa;
+      color: #000;
+      font-size: 15px;
+      font-weight: 800;
+      border: none;
+      border-radius: 12px;
+      padding: 16px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .claim-btn:active { opacity: 0.85; }
+
+    .privacy {
+      font-size: 11px;
+      color: #333;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    /* â”€â”€ Drink choice overlay â”€â”€ */
+    .drink-hero { text-align: center; }
+    .drink-hero .drink-title { font-size: 18px; font-weight: 800; color: #fff; }
+    .drink-hero .drink-sub   { font-size: 13px; color: #555; margin-top: 6px; }
+
+    .drink-options { display: flex; gap: 14px; }
+
+    .drink-btn {
+      flex: 1;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 28px 12px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .drink-btn:active { border-color: #00d4aa; background: rgba(0,212,170,0.08); }
+
+    .drink-emoji { font-size: 52px; line-height: 1; }
+    .drink-name  { font-size: 14px; font-weight: 700; color: #fff; }
+
+    /* â”€â”€ Confirmed overlay â”€â”€ */
+    .confirmed-hero {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .confirmed-emoji { font-size: 72px; line-height: 1; }
+
+    .confirmed-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .confirmed-sub  { font-size: 13px; color: #666; line-height: 1.6; }
+    .confirmed-tokens { font-size: 15px; font-weight: 700; color: #00d4aa; }
+
+    .replay-btn {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      color: #aaa;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 14px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">anthic</div>
+    <div class="token-pill" id="tokenPill">ðŸª™ 1 token</div>
+  </div>
+
+  <!-- â”€â”€ Start overlay â”€â”€ -->
+  <div class="overlay" id="startOverlay">
+    <div class="card">
+
+      <div class="start-hero">
+        <div class="drinks">ðŸº ðŸ·</div>
+        <h2>Play for a free drink!</h2>
+        <p>Score 8 out of 10 and win a free pint or glass of wine.</p>
+      </div>
+
+      <div class="score-target">
+        You've already earned <strong>1 ðŸª™ token</strong>.<br>
+        Play the bonus game to win more â€” and the drink.
+      </div>
+
+      <button class="play-btn" onclick="launchGame()">Tap to Play â–¶</button>
+
+      <div class="demo-row">
+        <span class="demo-label">Demo</span>
+        <button class="demo-btn" onclick="forceDemo('lose')">Test Lose</button>
+        <button class="demo-btn demo-btn-win" onclick="forceDemo('win')">Test Win</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- â”€â”€ End capture overlay â”€â”€ -->
+  <div class="overlay hidden" id="endOverlay">
+    <div class="card" id="endCard">
+
+      <!-- Score result -->
+      <div class="result-hero" id="resultHero"></div>
+
+      <hr class="divider">
+
+      <!-- Capture form -->
+      <div class="input-wrap">
+        <div>
+          <div class="field-label">Email</div>
+          <input type="email" id="emailInput" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div>
+          <div class="field-label">Phone</div>
+          <div class="phone-row">
+            <select class="country-code" id="countryCode">
+              <option value="+353">ðŸ‡®ðŸ‡ª +353</option>
+              <option value="+44">ðŸ‡¬ðŸ‡§ +44</option>
+              <option value="+1">ðŸ‡ºðŸ‡¸ +1</option>
+              <option value="+49">ðŸ‡©ðŸ‡ª +49</option>
+              <option value="+33">ðŸ‡«ðŸ‡· +33</option>
+              <option value="+34">ðŸ‡ªðŸ‡¸ +34</option>
+              <option value="+39">ðŸ‡®ðŸ‡¹ +39</option>
+              <option value="+31">ðŸ‡³ðŸ‡± +31</option>
+              <option value="+61">ðŸ‡¦ðŸ‡º +61</option>
+            </select>
+            <input type="tel" id="phoneInput" placeholder="087 123 4567" autocomplete="tel">
+          </div>
+        </div>
+        <div class="error-msg" id="errorMsg">Please enter your email or phone number.</div>
+      </div>
+
+      <button class="claim-btn" id="claimBtn">Claim My Reward</button>
+
+      <div class="privacy">No spam. Your details are used only to deliver your reward.</div>
+
+    </div>
+  </div>
+
+  <!-- â”€â”€ Drink choice overlay â”€â”€ -->
+  <div class="overlay hidden" id="drinkOverlay">
+    <div class="card">
+      <div class="drink-hero">
+        <div class="drink-title">Choose your free drink</div>
+        <div class="drink-sub">Show your choice at the bar to claim it</div>
+      </div>
+      <div class="drink-options">
+        <button class="drink-btn" onclick="confirmDrink('pint')">
+          <span class="drink-emoji">ðŸº</span>
+          <span class="drink-name">Pint</span>
+        </button>
+        <button class="drink-btn" onclick="confirmDrink('wine')">
+          <span class="drink-emoji">ðŸ·</span>
+          <span class="drink-name">Wine</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- â”€â”€ Confirmed overlay â”€â”€ -->
+  <div class="overlay hidden" id="confirmedOverlay">
+    <div class="card">
+      <div class="confirmed-hero">
+        <div class="confirmed-emoji" id="confirmedEmoji">ðŸº</div>
+        <div class="confirmed-title" id="confirmedTitle">Enjoy your pint!</div>
+        <div class="confirmed-sub">Show this screen at the bar to claim your free drink.</div>
+        <div class="confirmed-tokens" id="confirmedTokens"></div>
+      </div>
+      <button class="replay-btn" onclick="replayGame()">Play Again</button>
+    </div>
+  </div>
+
+  <canvas id="game"></canvas>
+
+  <script>
+    // â”€â”€ Canvas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const canvas = document.getElementById('game');
+    const ctx    = canvas.getContext('2d');
+    const HEADER = 52;
+    const CW     = Math.min(window.innerWidth, 480);
+    const CH     = window.innerHeight - HEADER;
+    canvas.width  = CW;
+    canvas.height = CH;
+    const S = CW / 360;
+
+    // â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const FPS      = 40;
+    const GRAVITY  = 0.75 * S;
+    const JUMP     = -11  * S;
+    const MAX_FALL = 11   * S;
+    const PIPE_SPD = -2.8 * S;
+    const GAP      = Math.round(165 * S);
+    const PIPE_SEP = Math.round(290 * S);
+    const MAX_SCORE = 10;
+    const WIN_SCORE = 8;
+
+    // â”€â”€ State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    let mode      = 'idle';
+    let pipes     = [];
+    let birdY     = CH / 2;
+    let birdVY    = 0;
+    let birdAngle = 0;
+    let barOffset = 0;
+    let timeOver  = null;
+    let finalScore = 0;
+
+    // â”€â”€ Assets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const imgBird   = new Image(); imgBird.src   = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADEAAAAjCAMAAAAKXBK+AAAABGdBTUEAALGPC/xhBQAAAwBQTFRFAAAACQoLBgEmGx8gHRk4Ay88IyMkJCUnJyYpKisrLS0uMDAxMzM0Ojk6PT09DQBKEBBKER5QDCVCGSJHFTlAKCRFJTpAKDJILTZMMy1FMjNENDZCMjBPND9BOj9DMz1UND5SOjhWMkVKQS09QT8/VEs+X1Q6c142Z2gebHg+dH0vf38rfHw9QUFBQkJCQkRCREJBRUZGSkNCTExMTk5OUURCVE9SWVNNVVNUV1dXWlpaX1tdXFxcXl5eaklFfU9FflFFbHFDYGBgYmJhaWlnbGxtbWxuZW9xbntzcG9scG9wdHN1fXt3fX55dniIe4yIiWUxhn48lHAwmXwzlFJGgGpAgH96sFNKtm9fzl9K03NH4WFM42hK7GNM7G1M4XFB9WdL8mpN92tN/mpM/m9N/nROgX+BkIo6qIUtrKw7rq49s7Izsrc0trc+ub86uL0/g4lDgIB5kIF/np9xpJR2urtFpql4vsM625kn36Ep3Kwp4qor76Au9LMr974u+L8u/L4sxaJawb1B6cMz78Mx+8Iu/MMu/MUt/Mku/Mwv/NEw+tg2/Noy7+s/8u89/Oc09fM79fQ49vY49vc++/89+/8/z9FA4OBB7+dD8O5E9fJH9PRD9fZD9fdK9vtE+/pD+/9A+/9D+/9E+P9H+ftJ+/9K9/Zs9vhv9vNzgoGCg4ODh4aGg4iDiYaHiYiJjIuKjIuMjo2Oj46NhoWYi5KLjpiQm4qBk5SMk5KRl5iWnZyZjoyhp6enrKuqr6+ur7Curba2uLepsrKysbiyu7W3ubm3vLy8urjEvcPAxMW6zsqxyMm9zM2/ztG8/P+AwcLBxcbEwsPPx8nJy8jIzMXR1dXK1NXU3N3a3+HS3+Dd5eTf6u3e8vbf+Pfb+fjZ+Pvf4+Pj8+/v9O7v8fLv+PLv+Pzl+fzp/P7r9vLx9PPz9PTz9vb0+Pf1+Pf3+fvy+vr3+v3z/v/w///3+vv4+vv++/z5+v75+/76+f3//Pn4/f75/v/6/f39/v/8////AAAAzvEL0QAAAQB0Uk5T////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////AFP3ByUAAAAJcEhZcwAADsIAAA7CARUoSoAAAAAYdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuNWWFMmUAAAPjSURBVDhPZdJ7WFNlHMDxttFBhW2ojTW5pMYlbLgdlsYq8IJiEmCmYvNWqAMiKcrSjIBusIGoKIqpMMdJUNCimzdslbdpWUmWWKFSal6CIqdMPOu8833Ped05Bz7/7HnO3u/e33v23uPtL0tsJ36M9S9aCcIfIQJIMnAQgr/A+hX/tDalsbImySOMSQkJCZP+xl9xRMWXBsMTo08A7AQx6GfAMKDrccUneAEiKiYTBCH5Grjd7h6XCxyUSFpReVsuS8YLEFHxVeorGVN/uNIBnW2/+K0xqQ3QNOhMTdqPFyB84Uh2sMP8WFlbW1v/emigEwDGgwDQGR/he2N8kUJkMC5XT+/2tVVVVfYX/WSHAPDQ9C0aFsxAWQpeJijSBqReaz/b8e/2tTU1NVSeauAh0N1zi6aZ263Oo02NLSdPtrHrUPHpIwaI1JOG0Pz6Wrj+bnGhG810NUJCAnBRIee2QcVT3F82QCaTPrTBTm3xFX92w7HA1bGy+G7wm0KexRVtTmfL/r3Y58teeqHaxhc3cGHsBGcU8kauSFYE/Mq+I4T53U8ZQ/Upro0l4rsERZYi8HtwGQOnZdJRFEVtoXKV0mPwJzweuIdcIhfuISqutLccWLYkd6PNtjFvydIDzWeYThp0OfY5boiKgFPA/R9X/OViwE9SZS7chKIelkqOgAu0hwH/Aw86Ob/Hd9fPn+OKyx3nrx8MUOWxR9Eq/X7hjofAt9uMi5DID+ord9xkg5s7Kuvf1XCFrTpv+dL0j5o5+zJiFcZdTYdRMSxytX1dQy+8sG53b8M6+3JcoMFGSf1lmH84FPIkLFKGRVLU+oZL55BLDevrqlW+oi5fFavT6UgdScIPSL8bFm3HndO12Zu2bUa2bcrWTgjB58idkD9n7jyRBc+mf4xuyYggzSo7vLDwyq7SKNXhuIhRDp5rXiRiNgXrUPEZGoxVt3WMRq9XvUzZPqTqslX6BebFImbTSCN7208dnc7RzlhRUFCw4v2VK9/TxsyZnzk7cfw4ofF74DlQ4fWGqoYGQcoHLRVlZeVvF1rfCFLONpsT771PKDh4mq94LDwyGop6utBSjFgLoqNMi80zw8YI6WN38YU6uswClRSVsEVxUUn5W+MSTQuf5y2cHxfGF6NhAROrpbiIC4pLy98cEmQSnty8KC4szVcYH5hVZmX3YAOktDBnxnP451mZmY+SX/gK6DV0jmdKSnGA5lqTo8EnQOJeZdfxxf1qtXpwlNVSyqvIGRomMIVdxxdGw8QEPNtdFe+kNwo42HV8wZmFXrLPafxUqG8xHM7G+wY/FepbOPEEnD/wU57XewcTNzBXMItnWwAAAABJRU5ErkJggg==';
+    const imgPipe   = new Image(); imgPipe.src   = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADsAAAGICAMAAADI0mjuAAAABGdBTUEAALGPC/xhBQAAAwBQTFRFAAAAPjtEQC07RTQqRzwsTzYyTjQ4STw9VTMyVTY8VTk9WDY1WDc+Wzk3Wjg7SzNDTTtCTjtJUTVGUzxDUThIWTxCVj5TZT9LR0IvS0gsSUg7RFMpUUM7VU48W0I7WlY1XFI8TmglTm42R38qSn4nTX4tUGYrU2ouWmovVWwxWGM2W2U8WWwzXGg6UXUnVnohUXwsWX0mWnwpUnQzUXE6XXAyWXw7YV0yZWo6Z3U8R0NCTEFCTUdJT05BR1VcUkNDVUVJVUlGVEpLXUFEXURNWk1HWExJVUVQWUFfWUpRXFFNWlxEU1BcXF16S2NxUmFzVGB6WGN2XmZ8XWx+YURNYE9HYExLYkdQaE9SaFFXblNYaFtpY31AdH1FYGJ9cG19XW2BaFyGR4UkR4YqS4QmTYUtSogkTYkrS4QwTogzTp4rUYYjU4IrVYsiUYovXYQmWoIuWY8lUoUyVYc4UYs0XIoxVZMuUpI0VJA4Upw1VJ85WJQyXaEpV6M5ZIo6YZs2ZZs4apExYaE1ZKM6Y6s2Za05a6Y0aqY+a6w0aKg8Zb09bLE2a7E7bro5da07d7M6cbo2cbs9a4BNbolGZZ1Aap5CdoFIdZVNfpdVY65AbqVAbLRGcq9Ae6ZMeK9JcrFFdrZJcr9OerRLeLhLZcM9bsI+dME8a8VBccVBccRLc8hCe8RDfcdOechGec1IfsxceNROfdZQi4JPioVUgZxZlYZZhKtWg7xUkb5XgMRGgMRIhs1Fg8hLiM1Ogs5ZjMVdh9RMhtlUld5VktxbmdNXicZjjdhkkMdglMpjmMphltZokdxklN1pnNxxh+BWheRbiuNVjOFbkOVTkeRem+FZiepik+ZhlOBqleljmOJjmuZomOtlnexok/BrmPFkm/RuoMxqqc51sNR4uNl/pORjpexsquVrrOlvqOdzqvNprPF2uOx2tvR4wupvwvN3wfR4xfl8zvt+t+2BvfiDyfyHzfiS0faN1PqF0P+L2P6N0PaS0fmS3/+YAAAAAAAAAAAAWw0+rgAAAQB0Uk5T////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////AFP3ByUAAAAJcEhZcwAADsIAAA7CARUoSoAAAAAYdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuNWWFMmUAAAXPSURBVHhe7ZsLWFNlGMftpklGltnVzCgihAwRK7tt0IKwGxlFN7ofNoqsaEFplkWSIitPF6SoTN25tBFhYCZaMCyisIBwawOMLpAYS0oHKPQ89H7fOcAYDM+Q6vF53v/hfOyw89/v/X/n4+w533bG9fb2xrz2ze4Df7f8WG9vsNeKoq2uQOQ4EVY30c1MJp01pAWmhM2csAB8g7wNfV6T717k9gu5yEWuJOQiF7mSkItc5EpCLnKRKwm5yD2MuQZhsFUS8bJpzMhcUeBHzTVxgq/eAS73f3BtyEUucpErC7nIRa4k5CIXuZKQi1zkSkIucg9XLpkb4QZbJWVqydxIyshcEbjy/u4iXPZQuOn/ItdEuQLvsSjLK5B+5oU+O+12QVk/m+jxFTiemOkLiKLAKzu+JC/hglvgKF8UofWFyxMu5IYWUoySy/vOpXll7qjzwiPMi3kxL+bFvJgX82JezIt5Ma83rvx59wCXtNR78M+74eKRWGUumOmGdH0UpogLKJnoA5d8vj+UK12XpfvIldtMnZK8pGMHuNBCP3OCon6Wr7vduGRc8YqOL4yLMeSScaWE2z/P8B/nHWsu5sW8mBfzYl7M687FvJgX82JezIt53bmYF/NiXsw7MtfbPNII3w2QuaRm+qWLwVxeIVfyunFJPyudJxzC9WF+0pNL+nnUXB/mYzHvIXAxL+bFvJSLeTEv5sW8mBfzunMxL+bFvJgX845ZXul+jT4umOkG8Sq9T6SfC2WTVppXOQhXvk9kWK7C+0T6uTJdEdcjr0wfXV5fuMPnpfNIPueV+pnPTPbk3nvtc5/8/OsvP1WWVlaWbnpv3aav3vaip1L0b7y5cNasS2dMvot6r4o5abLmjjtvv+2ayMj58yNVkdHepVJFxaqmaE6fdsIp14P3xiP8pl891X/SpIl+fuP9phL5gfxJ4yH/qX4Tp8Dzp56mUp98ZFzvuFuiZlwSRBRMl/ODQucG062hCj6HNMGhF4SEXHfrBOK9Yma4Vp/+dHoySJ+sY3TJOvJwOD2Yrmd0T6ae+3jYnAungTfusrvXf/p15ab3165bk7Fm/ZoVGRkvetWK5xlm6dK0R5KSgo4G7w1Rqxv++OvP5vId5VvYsvJyftUqtk+8h1jz8kefeOXVZ1Me0IYeBd77Y1fXtPW4Wu1N9gLBYq0WjEaT4EVZH7ylTcvLe/jiQCb0GPAuUOXWOw90NVobHYWixW4ROREGwvAS+Gw9s5J9hglnAo4lNatyHc6uriZr445CscxmMdHROLyIN4V4Z+siiPceVa4NuC2EK0hcec+hIl4t5aZQLtTsAK/Mra1VxA3XBcs126BmypXzynsO1QBXygs1u3GV5k2Vay7u5yrP29/P293zHswrcfu8xQ7n/v2/2ezWAmGD/TshSxoHHF1hMRqNoijCeOG4LPDqwasLT404juSNLK53urp2OZqg3rJai8iLrIzxkBHWZdqHVrJLmPBAqa8ii6ucLhiTO63Qz45tBWIBjFx4BdLSxvwhLYSwTdnJ2mxxiVb2Ql7i3WXbad0gFNZZxDzR0Dco4aRl4AwsS8pnDQL8fRnUbFikD2dozXRMUq/dAv1sFYyUMkjknY3UQLwLsw2LtLOZCH/wLoguduwDr8O27TN6jAxkX0kGQBPBfyN4yYu8lKxdzi5Juui8gONJXlWu5fd9rraW1uYvSiBvScnWEjNZ8s35mzfnbzWDZ4vZTE7Q8BacvTgN+mrxY0yAVPPr+VVtTifU3d7u6nI529vb2qn27IEfp7OlweHc3VxXW11dXVNT92Xp9+VrX35h4RzSVzddmfjuRxWtrp6ezs5uqh7pV3dPR3d3R8e+va3fdu5t/WE7qKqiogKaz9/JCAyZDt6bJ5wdOi8xsWijFxUV5SRu/DgxMSeHrjmwzpsbfOZZ48F7X4zqDLVao4mP13goPj4+IV6TEJsQDU+po6LUmmi1Wh0brYYz/OWxJ8b1/gNv3XyOE26IBAAAAABJRU5ErkJggg==';
+    const imgBottom = new Image(); imgBottom.src = 'data:image/png;base64,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';
+    const BIRD_X    = Math.round(CW / 3);
+
+    // â”€â”€ Pipes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function makePipe(x, gapTop) {
+      pipes.push({ x, y: gapTop - imgPipe.height, flip: false });
+      pipes.push({ x, y: gapTop + GAP,            flip: true  });
+    }
+
+    function buildLevel() {
+      pipes = [];
+      let x = CW + 80;
+      [0.30, 0.45, 0.25, 0.55, 0.35, 0.50, 0.20, 0.40, 0.55, 0.28, 0.48, 0.35, 0.60].forEach(p => {
+        makePipe(x, Math.round(p * (CH - GAP - 60)) + 30);
+        x += PIPE_SEP;
+      });
+    }
+
+    imgPipe.onload = buildLevel;
+
+    function pipeScore() {
+      let s = 0;
+      for (const p of pipes) if (!p.flip && p.x + imgPipe.width < BIRD_X) s++;
+      return Math.min(s, MAX_SCORE);
+    }
+
+    function bonusTokens(s) {
+      if (s >= 8) return 3;
+      if (s >= 5) return 2;
+      if (s >= 2) return 1;
+      return 0;
+    }
+
+    function updatePill(s) {
+      const t = 1 + bonusTokens(s);
+      document.getElementById('tokenPill').textContent = 'ðŸª™ ' + t + (t === 1 ? ' token' : ' tokens');
+    }
+
+    // â”€â”€ Flow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function launchGame() {
+      document.getElementById('startOverlay').classList.add('hidden');
+      birdY     = CH / 2;
+      birdVY    = 0;
+      birdAngle = 0;
+      barOffset = 0;
+      buildLevel();
+      updatePill(0);
+      mode = 'running';
+    }
+
+    function forceDemo(result) {
+      document.getElementById('startOverlay').classList.add('hidden');
+      buildLevel();
+      if (result === 'win') {
+        for (const p of pipes) p.x = -imgPipe.width - 10;
+      }
+      finalScore = result === 'win' ? 10 : 3;
+      showEndOverlay(finalScore);
+    }
+
+    function showEndOverlay(sc) {
+      mode = 'idle';
+      const win = sc >= WIN_SCORE;
+      updatePill(sc);
+
+      // Build result hero HTML
+      const bonus = bonusTokens(sc);
+      const cls   = win ? 'win' : 'lose';
+      const pct   = Math.round((sc / MAX_SCORE) * 100);
+
+      document.getElementById('resultHero').innerHTML = `
+        <div class="result-score-label">Your Score</div>
+        <div class="result-score-big ${cls}">${sc} / ${MAX_SCORE}</div>
+        <div class="progress-wrap">
+          <div class="progress-fill ${cls}" style="width:${pct}%"></div>
+        </div>
+        <div class="progress-labels"><span>0</span><span style="color:rgba(255,255,255,0.25)">â–² 8 to win</span><span>10</span></div>
+        <div class="result-badge ${cls}" style="margin-top:10px;">
+          <div class="badge-emoji">${win ? 'ðŸŽ‰' : 'ðŸª™'}</div>
+          <div class="badge-text">${win ? 'You won a free drink!' : `${1 + bonus} token${1 + bonus > 1 ? 's' : ''} earned`}</div>
+          <div class="badge-sub">${win ? 'Enter your details below to claim' : (sc < WIN_SCORE ? 'Score 8/10 next time for a free drink ðŸº' : '')}</div>
+        </div>
+      `;
+
+      document.getElementById('claimBtn').textContent = win ? 'Claim My Free Drink â–¶' : 'Claim My Tokens â–¶';
+      document.getElementById('claimBtn').onclick = () => submitCapture(sc);
+      document.getElementById('endOverlay').classList.remove('hidden');
+    }
+
+    function submitCapture(sc) {
+      const email = document.getElementById('emailInput').value.trim();
+      const phone = document.getElementById('phoneInput').value.trim();
+      const err   = document.getElementById('errorMsg');
+
+      if (!email && !phone) {
+        err.style.display = 'block';
+        return;
+      }
+      err.style.display = 'none';
+      document.getElementById('endOverlay').classList.add('hidden');
+
+      if (sc >= WIN_SCORE) {
+        document.getElementById('drinkOverlay').classList.remove('hidden');
+      } else {
+        showNoWinConfirmed(sc);
+      }
+    }
+
+    function confirmDrink(choice) {
+      document.getElementById('drinkOverlay').classList.add('hidden');
+      const emoji = choice === 'pint' ? 'ðŸº' : 'ðŸ·';
+      const name  = choice === 'pint' ? 'pint' : 'glass of wine';
+      document.getElementById('confirmedEmoji').textContent = emoji;
+      document.getElementById('confirmedTitle').textContent = `Enjoy your ${name}!`;
+      document.getElementById('confirmedTokens').textContent = `+ ${1 + bonusTokens(finalScore)} ðŸª™ tokens added to your account`;
+      document.getElementById('confirmedOverlay').classList.remove('hidden');
+    }
+
+    function showNoWinConfirmed(sc) {
+      const bonus = bonusTokens(sc);
+      document.getElementById('confirmedEmoji').textContent = 'ðŸª™';
+      document.getElementById('confirmedTitle').textContent = `${1 + bonus} token${1 + bonus > 1 ? 's' : ''} earned!`;
+      document.getElementById('confirmedTokens').textContent = 'Score 8/10 next time to win a free ðŸº or ðŸ·';
+      document.getElementById('confirmedOverlay').classList.remove('hidden');
+    }
+
+    function replayGame() {
+      document.getElementById('confirmedOverlay').classList.add('hidden');
+      document.getElementById('emailInput').value  = '';
+      document.getElementById('phoneInput').value  = '';
+      document.getElementById('errorMsg').style.display = 'none';
+      document.getElementById('startOverlay').classList.remove('hidden');
+    }
+
+    // â”€â”€ Input â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function onTap(e) {
+      if (mode === 'running') {
+        birdVY = JUMP;
+        e.preventDefault();
+      }
+    }
+
+    canvas.addEventListener('touchstart', onTap, { passive: false });
+    canvas.addEventListener('mousedown',  onTap);
+    document.addEventListener('keydown',  e => { if (mode === 'running') { birdVY = JUMP; } });
+
+    // â”€â”€ Collision â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const BW = 34, BH = 24;
+
+    function hitting(p) {
+      if (BIRD_X + BW <= p.x || BIRD_X >= p.x + imgPipe.width) return false;
+      if (birdY + BH <= p.y || birdY >= p.y + imgPipe.height)  return false;
+      return true;
+    }
+
+    // â”€â”€ Drawing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function rr(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.arcTo(x + w, y, x + w, y + r, r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+      ctx.lineTo(x + r, y + h);
+      ctx.arcTo(x, y + h, x, y + h - r, r);
+      ctx.lineTo(x, y + r);
+      ctx.arcTo(x, y, x + r, y, r);
+      ctx.closePath();
+    }
+
+    function drawSky() {
+      const g = ctx.createLinearGradient(0, 0, 0, CH);
+      g.addColorStop(0, '#5dbcd2'); g.addColorStop(0.7, '#87cedc'); g.addColorStop(1, '#b0e0ea');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, CW, CH);
+    }
+
+    function drawPipes() {
+      for (const p of pipes) {
+        if (!imgPipe.complete) continue;
+        ctx.save();
+        if (p.flip) {
+          ctx.translate(p.x + imgPipe.width / 2, p.y + imgPipe.height / 2);
+          ctx.scale(1, -1);
+          ctx.drawImage(imgPipe, -imgPipe.width / 2, -imgPipe.height / 2);
+        } else {
+          ctx.drawImage(imgPipe, p.x, p.y);
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawBar() {
+      if (!imgBottom.complete || !imgBottom.naturalWidth) return;
+      if (barOffset < -imgBottom.width) barOffset = 0;
+      const by = CH - imgBottom.height;
+      ctx.drawImage(imgBottom, barOffset, by);
+      ctx.drawImage(imgBottom, barOffset + imgBottom.width, by);
+    }
+
+    function drawBird() {
+      if (!imgBird.complete) return;
+      ctx.save();
+      ctx.translate(BIRD_X + imgBird.width / 2, birdY + imgBird.height / 2);
+      ctx.rotate(birdAngle * Math.PI / 180);
+      ctx.drawImage(imgBird, -imgBird.width / 2, -imgBird.height / 2);
+      ctx.restore();
+    }
+
+    function drawHUD() {
+      const sc  = pipeScore();
+      const txt = sc + ' / ' + MAX_SCORE;
+      ctx.fillStyle = 'rgba(0,0,0,0.40)';
+      rr(CW / 2 - 46, 10, 92, 34, 10); ctx.fill();
+      ctx.fillStyle = sc >= WIN_SCORE ? '#00d4aa' : '#fff';
+      ctx.font = `bold ${Math.round(17 * S)}px Segoe UI, system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(txt, CW / 2, 32);
+
+      // Drink reminder top-right
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      rr(CW - Math.round(70 * S), 10, Math.round(62 * S), 28, 8); ctx.fill();
+      ctx.font = `${Math.round(13 * S)}px Segoe UI, system-ui, sans-serif`;
+      ctx.fillText('ðŸº ðŸ·', CW - Math.round(39 * S), 30);
+    }
+
+    // â”€â”€ Main loop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function frame() {
+      drawSky();
+      drawPipes();
+      drawBar();
+      drawBird();
+
+      if (mode === 'running') {
+        for (const p of pipes) p.x += PIPE_SPD;
+        barOffset += PIPE_SPD;
+
+        birdVY = Math.min(birdVY + GRAVITY, MAX_FALL);
+        birdY += birdVY;
+        birdAngle = birdVY < 0 ? -15 : Math.min(birdAngle + 4, 70);
+
+        const floorY = imgBottom.complete ? CH - imgBottom.height : CH - 20;
+        if (birdY + BH >= floorY || birdY <= 0) {
+          finalScore = pipeScore();
+          showEndOverlay(finalScore);
+          return;
+        }
+
+        for (const p of pipes) {
+          if (hitting(p)) {
+            finalScore = pipeScore();
+            showEndOverlay(finalScore);
+            return;
+          }
+        }
+
+        drawHUD();
+      }
+    }
+
+    setInterval(frame, 1000 / FPS);
+  </script>
+</body>
+</html>
+
