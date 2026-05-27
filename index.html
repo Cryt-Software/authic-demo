@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Copper Kettle — Receipt</title>
+  <!-- QR code library -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #1a1a2e;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Courier New', Courier, monospace;
+      padding: 40px 16px;
+    }
+
+    /* ── Receipt paper ── */
+    .receipt {
+      background: #fdfdf5;
+      width: 340px;
+      border-radius: 4px 4px 0 0;
+      box-shadow:
+        0 4px 6px rgba(0,0,0,0.3),
+        0 20px 60px rgba(0,0,0,0.5);
+      position: relative;
+      color: #1a1a1a;
+      font-size: 13px;
+    }
+
+    /* Torn bottom edge */
+    .receipt::after {
+      content: '';
+      display: block;
+      height: 18px;
+      background:
+        radial-gradient(circle at 9px -2px, #1a1a2e 70%, transparent 72%) repeat-x,
+        #fdfdf5;
+      background-size: 18px 18px;
+      margin-top: -1px;
+    }
+
+    /* ── Header band ── */
+    .receipt-header {
+      background: #1b4332;
+      color: #fff;
+      text-align: center;
+      padding: 20px 24px 16px;
+      border-radius: 4px 4px 0 0;
+    }
+
+    .pub-name {
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #d4ac0d;
+    }
+
+    .pub-tagline {
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.65);
+      margin-top: 4px;
+    }
+
+    .pub-address {
+      font-size: 11px;
+      color: rgba(255,255,255,0.75);
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    .shamrock {
+      font-size: 20px;
+      margin: 8px 0 0;
+      letter-spacing: 6px;
+    }
+
+    /* ── Body ── */
+    .receipt-body {
+      padding: 16px 20px;
+    }
+
+    /* Meta row */
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #555;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed #ccc;
+    }
+
+    /* Section divider */
+    .divider {
+      border: none;
+      border-top: 1px dashed #bbb;
+      margin: 10px 0;
+    }
+
+    /* Item rows */
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .items-table thead th {
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #888;
+      text-align: left;
+      padding-bottom: 6px;
+    }
+
+    .items-table thead th:last-child { text-align: right; }
+
+    .items-table tbody tr td {
+      padding: 5px 0;
+      vertical-align: top;
+    }
+
+    .item-qty {
+      width: 24px;
+      color: #555;
+      font-size: 12px;
+    }
+
+    .item-name {
+      font-size: 13px;
+      color: #1a1a1a;
+      padding-right: 8px;
+    }
+
+    .item-sub {
+      font-size: 10px;
+      color: #888;
+      display: block;
+    }
+
+    .item-price {
+      text-align: right;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    /* Totals */
+    .totals {
+      margin-top: 6px;
+    }
+
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      font-size: 13px;
+      color: #333;
+    }
+
+    .totals-row.tax {
+      color: #777;
+      font-size: 12px;
+    }
+
+    .totals-row.total {
+      font-size: 16px;
+      font-weight: 900;
+      color: #1b4332;
+      border-top: 2px solid #1b4332;
+      padding-top: 8px;
+      margin-top: 4px;
+    }
+
+    .totals-row.tip {
+      color: #777;
+      font-size: 12px;
+    }
+
+    /* Payment */
+    .payment-section {
+      background: #f0f4f0;
+      border: 1px dashed #b5c8b5;
+      border-radius: 4px;
+      padding: 10px 14px;
+      margin-top: 12px;
+      font-size: 12px;
+      color: #444;
+    }
+
+    .payment-section .pay-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 0;
+    }
+
+    .pay-label { color: #777; }
+    .pay-value { font-weight: 700; color: #1b4332; }
+
+    /* ── Anthic reward strip ── */
+    .reward-strip {
+      background: linear-gradient(135deg, #0d1f0d 0%, #1b4332 100%);
+      color: #fff;
+      text-align: center;
+      padding: 14px 20px;
+      margin: 14px 0 0;
+    }
+
+    .reward-strip .points-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.6);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    .reward-strip .points-value {
+      font-size: 28px;
+      font-weight: 900;
+      color: #d4ac0d;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      letter-spacing: 1px;
+      line-height: 1.1;
+    }
+
+    .reward-strip .points-sub {
+      font-size: 11px;
+      color: rgba(255,255,255,0.55);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      margin-top: 2px;
+    }
+
+    /* ── QR section ── */
+    .qr-section {
+      text-align: center;
+      padding: 18px 20px 10px;
+    }
+
+    .qr-label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 12px;
+    }
+
+    #qrcode {
+      display: inline-block;
+      border: 3px solid #1b4332;
+      border-radius: 4px;
+      padding: 6px;
+      background: #fff;
+    }
+
+    .qr-hint {
+      font-size: 10px;
+      color: #999;
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+
+    /* ── Demo link ── */
+    .demo-link-section {
+      text-align: center;
+      padding: 10px 20px 16px;
+    }
+
+    .demo-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #d4ac0d;
+      color: #1a1a1a;
+      text-decoration: none;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      padding: 10px 20px;
+      border-radius: 50px;
+      transition: opacity 0.15s, transform 0.15s;
+      text-transform: uppercase;
+    }
+
+    .demo-link:hover {
+      opacity: 0.88;
+      transform: translateY(-1px);
+    }
+
+    .demo-link .spin-icon { font-size: 16px; }
+
+    .demo-note {
+      font-size: 10px;
+      color: #aaa;
+      margin-top: 6px;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    /* ── Footer ── */
+    .receipt-footer {
+      text-align: center;
+      padding: 10px 20px 14px;
+      border-top: 1px dashed #ccc;
+      font-size: 10px;
+      color: #aaa;
+      line-height: 1.6;
+    }
+
+    .receipt-footer .thank-you {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1b4332;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="receipt">
+
+    <!-- ── PUB HEADER ── -->
+    <div class="receipt-header">
+      <div class="shamrock">☘️</div>
+      <div class="pub-name">The Copper Kettle</div>
+      <div class="pub-tagline">Traditional Irish Pub &amp; Kitchen</div>
+      <div class="pub-address">
+        14 O'Connell Street, Dublin 1<br>
+        Tel: +353 1 874 2200
+      </div>
+    </div>
+
+    <!-- ── BODY ── -->
+    <div class="receipt-body">
+
+      <!-- Meta -->
+      <div class="meta-row">
+        <span>Table 7 · 4 Guests</span>
+        <span>27 May 2026 · 19:42</span>
+      </div>
+      <div class="meta-row" style="margin-top:-8px; border-bottom:none; font-size:11px; color:#888;">
+        <span>Server: Aoife M.</span>
+        <span>Order #CK-2847</span>
+      </div>
+
+      <hr class="divider">
+
+      <!-- Items -->
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th>Qty</th>
+            <th>Item</th>
+            <th>Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="item-qty">3</td>
+            <td class="item-name">
+              Guinness Draught
+              <span class="item-sub">Pint · Extra cold</span>
+            </td>
+            <td class="item-price">€17.40</td>
+          </tr>
+          <tr>
+            <td class="item-qty">1</td>
+            <td class="item-name">
+              Jameson Irish Whiskey
+              <span class="item-sub">25ml · Neat</span>
+            </td>
+            <td class="item-price">€6.50</td>
+          </tr>
+          <tr>
+            <td class="item-qty">2</td>
+            <td class="item-name">
+              Irish Beef &amp; Guinness Stew
+              <span class="item-sub">Served w/ brown soda bread</span>
+            </td>
+            <td class="item-price">€29.00</td>
+          </tr>
+          <tr>
+            <td class="item-qty">1</td>
+            <td class="item-name">
+              Battered Fish &amp; Chips
+              <span class="item-sub">Served w/ mushy peas &amp; tartare</span>
+            </td>
+            <td class="item-price">€16.50</td>
+          </tr>
+          <tr>
+            <td class="item-qty">1</td>
+            <td class="item-name">
+              Colcannon Soup
+              <span class="item-sub">Potato, kale &amp; scallion</span>
+            </td>
+            <td class="item-price">€7.50</td>
+          </tr>
+          <tr>
+            <td class="item-qty">2</td>
+            <td class="item-name">
+              Tayto Crisps
+              <span class="item-sub">Cheese &amp; Onion</span>
+            </td>
+            <td class="item-price">€3.00</td>
+          </tr>
+          <tr>
+            <td class="item-qty">4</td>
+            <td class="item-name">
+              Soft Drinks
+              <span class="item-sub">Cidona, Ballygowan</span>
+            </td>
+            <td class="item-price">€12.00</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <hr class="divider">
+
+      <!-- Totals -->
+      <div class="totals">
+        <div class="totals-row">
+          <span>Subtotal</span>
+          <span>€91.90</span>
+        </div>
+        <div class="totals-row tax">
+          <span>VAT @ 13.5% (food)</span>
+          <span>€6.20</span>
+        </div>
+        <div class="totals-row tax">
+          <span>VAT @ 23% (alcohol)</span>
+          <span>€5.50</span>
+        </div>
+        <div class="totals-row total">
+          <span>TOTAL</span>
+          <span>€103.60</span>
+        </div>
+      </div>
+
+      <!-- Payment -->
+      <div class="payment-section">
+        <div class="pay-row">
+          <span class="pay-label">Payment Method</span>
+          <span class="pay-value">Visa ···· 4821</span>
+        </div>
+        <div class="pay-row">
+          <span class="pay-label">Amount Charged</span>
+          <span class="pay-value">€103.60</span>
+        </div>
+        <div class="pay-row">
+          <span class="pay-label">Tip Added</span>
+          <span class="pay-value">€10.36</span>
+        </div>
+        <div class="pay-row" style="margin-top:4px; padding-top:4px; border-top:1px dashed #b5c8b5;">
+          <span class="pay-label">Grand Total</span>
+          <span class="pay-value" style="font-size:14px;">€113.96</span>
+        </div>
+      </div>
+
+    </div><!-- /receipt-body -->
+
+    <!-- ── ANTHIC REWARD POINTS ── -->
+    <div class="reward-strip">
+      <div class="points-label">🏆 Anthic Reward Points Earned</div>
+      <div class="points-value">+1,036 pts</div>
+      <div class="points-sub">Total balance: 8,420 pts · Tier: Gold 🥇</div>
+    </div>
+
+    <!-- ── QR CODE ── -->
+    <div class="qr-section">
+      <div class="qr-label">Scan to Spin &amp; Win a Prize!</div>
+      <div id="qrcode"></div>
+      <div class="qr-hint">
+        Use your Anthic points to spin the wheel<br>
+        and win free drinks, vouchers &amp; more 🎁
+      </div>
+    </div>
+
+    <!-- ── DEMO HYPERLINK ── -->
+    <div class="demo-link-section">
+      <a
+        class="demo-link"
+        href="https://cryt-software.github.io/anthic-demo/spinwheel-demo.html"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <span class="spin-icon">🎡</span>
+        Tap Here to Spin &amp; Win
+      </a>
+      <div class="demo-note">↑ Demo link — tap to open the spin wheel</div>
+    </div>
+
+    <!-- ── FOOTER ── -->
+    <div class="receipt-footer">
+      <div class="thank-you">Sláinte! 🍺</div>
+      Thank you for visiting The Copper Kettle.<br>
+      We hope to see you again soon!<br><br>
+      <em>Powered by <strong style="color:#1b4332;">Anthic</strong> Loyalty Platform</em><br>
+      <a href="https://cryt.ie" style="color:#1b4332; text-decoration:none;">cryt.ie</a>
+    </div>
+
+  </div><!-- /receipt -->
+
+  <script>
+    // Generate the QR code pointing to the spin wheel demo page
+    new QRCode(document.getElementById("qrcode"), {
+      text: "https://cryt-software.github.io/anthic-demo/spinwheel-demo.html",
+      width: 160,
+      height: 160,
+      colorDark: "#1b4332",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  </script>
+
+</body>
+</html>
