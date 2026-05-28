@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Anthic — Spin & Win</title>
+  <title>Authic — Spin & Win</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
@@ -360,7 +360,7 @@
 <body>
 
   <div class="header">
-    <div class="logo">anthic</div>
+    <div class="logo">authic</div>
     <div class="token-pill" id="tokenPill">🎡 Spin to win!</div>
   </div>
 
@@ -903,7 +903,7 @@
         btnText = 'Claim 2× Points'; btnCls = 'claim-btn c-pts';
       } else if (seg.type === 'pts') {
         emoji = '🪙'; title = `+${seg.pts} Points!`;  titleCls = 'pts';
-        sub   = `${seg.pts} loyalty points added to your Anthic account.`;
+        sub   = `${seg.pts} loyalty points added to your Authic account.`;
         btnText = `Claim +${seg.pts} Points`; btnCls = 'claim-btn c-pts';
       } else {
         emoji = '😅'; title = 'Try Again Next Time';  titleCls = 'none';
@@ -958,10 +958,10 @@
       if (seg && seg.type === '2x') {
         emoji = '✨'; title = '2× Points Unlocked!';
         sub   = 'Double points will apply automatically on your next order.';
-        note  = 'Saved to your Anthic account';
+        note  = 'Saved to your Authic account';
       } else if (seg && seg.type === 'pts') {
         emoji = '🪙'; title = `+${seg.pts} Points Added!`;
-        sub   = 'Points have been added to your Anthic loyalty account.';
+        sub   = 'Points have been added to your Authic loyalty account.';
         note  = `Balance updated — keep earning!`;
       } else {
         emoji = '🎡'; title = 'Spin Again Soon!';
